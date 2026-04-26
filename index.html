@@ -67,10 +67,10 @@
 <div id="home-screen" style="position:fixed; inset:0; background:var(--bg); z-index:5000; display:flex; align-items:center; justify-content:center; padding:20px;">
     <div style="background:var(--navy); padding:25px; border-radius:20px; width:100%; max-width:360px; border:1px solid var(--cyan); text-align:center;">
         <h2 style="color:var(--gold); margin-bottom: 20px;">DTU MEET PRO</h2>
-        <input type="text" id="userName" placeholder="Tên của bạn..." style="width:100%; padding:12px; margin-bottom:12px; border-radius:8px; border:none; background:#0d1b2a; color:white; outline:none;">
+        <input type="text" id="userName" autocomplete="off" placeholder="Tên của bạn..." style="width:100%; padding:12px; margin-bottom:12px; border-radius:8px; border:none; background:#0d1b2a; color:white; outline:none;">
         <button onclick="startApp(true)" style="width:100%; padding:12px; background:var(--cyan); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">TẠO PHÒNG MỚI</button>
         <div style="margin:10px 0; opacity:0.5;">-- HOẶC --</div>
-        <input type="text" id="roomInput" inputmode="numeric" placeholder="Nhập mã 6 số..." style="width:100%; padding:12px; margin-bottom:12px; border-radius:8px; border:none; background:#0d1b2a; color:white; outline:none;">
+        <input type="text" id="roomInput" autocomplete="off" inputmode="numeric" placeholder="Nhập mã 6 số..." style="width:100%; padding:12px; margin-bottom:12px; border-radius:8px; border:none; background:#0d1b2a; color:white; outline:none;">
         <button onclick="startApp(false)" style="width:100%; padding:12px; background:transparent; border:1px solid var(--cyan); color:var(--cyan); border-radius:8px; cursor:pointer;">VÀO PHÒNG</button>
     </div>
 </div>
@@ -113,7 +113,7 @@
         </div>
         <div id="chat-messages"></div>
         <div style="padding:15px; display:flex; gap:8px; border-top:1px solid var(--gray);">
-            <input type="text" id="chatInput" onkeydown="if(event.key==='Enter') sendChat()" placeholder="Nhập tin nhắn..." style="flex:1; padding:10px; border-radius:20px; border:none; background:var(--gray); color:white; outline:none;">
+            <input type="text" id="chatInput" autocomplete="off" onkeydown="if(event.key==='Enter') sendChat()" placeholder="Nhập tin nhắn..." style="flex:1; padding:10px; border-radius:20px; border:none; background:var(--gray); color:white; outline:none;">
             <button onclick="sendChat()" style="background:var(--cyan); border:none; border-radius:50%; width:40px; height:40px; cursor:pointer;">➤</button>
         </div>
     </div>
@@ -243,7 +243,6 @@
             div.className = 'reaction-overlay';
             div.innerText = icon;
             target.appendChild(div);
-            // Icon tồn tại trong 10 giây rồi tự xóa khỏi DOM
             setTimeout(() => div.remove(), 10000);
         }
     }
@@ -299,13 +298,12 @@
                 let vol = data.reduce((a, b) => a + b) / data.length;
                 const wrap = document.getElementById(`wrap-${id}`);
                 if (wrap) { 
-                    // Ngưỡng 35 để kích hoạt khung vàng
                     wrap.classList.toggle('speaking', vol > 35); 
                     requestAnimationFrame(frame); 
                 }
             };
             frame();
-        } catch(e) { console.log("Voice detection error"); }
+        } catch(e) {}
     }
 
     function toggleMic() { localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled; document.getElementById('micBtn').classList.toggle('off', !localStream.getAudioTracks()[0].enabled); }
