@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DTU MEET Pro - Final Fix</title>
+    <title>DTU MEET Pro - Global Connect Fix</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root { --bg: #0a192f; --gold: #ffd700; --navy: #112240; --cyan: #64ffda; --red: #ff4d4d; --gray: #233554; }
@@ -13,119 +13,133 @@
         /* GIAO DIỆN CHỜ */
         #home-screen { position: fixed; inset: 0; background: var(--bg); z-index: 5000; display: flex; align-items: center; justify-content: center; }
         .home-box { background: var(--navy); padding: 30px; border-radius: 20px; width: 380px; border: 1px solid var(--cyan); text-align: center; }
-        .btn-main { width: 100%; padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; margin: 5px 0; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid var(--gray); background: #0d1b2a; color: white; outline: none; }
 
-        /* LAYOUT CHÍNH */
+        /* MÀN HÌNH CHÍNH */
         #app-container { display: none; height: 100vh; flex-direction: row; }
         #video-section { flex: 1; display: flex; flex-direction: column; position: relative; }
         
-        /* HIỂN THỊ MÃ PHÒNG & THÔNG TIN (KHÔNG BỊ CHE) */
-        .info-bar { position: absolute; top: 20px; left: 20px; right: 20px; display: flex; justify-content: space-between; z-index: 1000; pointer-events: none; }
-        .info-item { background: rgba(17, 34, 64, 0.9); padding: 10px 18px; border-radius: 12px; border: 1px solid var(--cyan); color: var(--gold); pointer-events: auto; cursor: pointer; font-weight: bold; }
+        .info-bar { position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; z-index: 1000; pointer-events: none; }
+        .info-item { background: rgba(17, 34, 64, 0.9); padding: 8px 15px; border-radius: 10px; border: 1px solid var(--cyan); color: var(--gold); pointer-events: auto; cursor: pointer; font-size: 13px; font-weight: bold; }
 
-        /* GRID VIDEO */
-        #video-grid { flex: 1; display: flex; flex-wrap: wrap; gap: 15px; padding: 80px 20px 20px 20px; align-content: center; justify-content: center; overflow-y: auto; }
-        .video-wrapper { position: relative; background: #000; border-radius: 15px; overflow: hidden; aspect-ratio: 16/9; border: 3px solid var(--gray); width: 100%; max-width: 480px; transition: 0.3s; }
+        #video-grid { flex: 1; display: flex; flex-wrap: wrap; gap: 15px; padding: 70px 20px 20px 20px; align-content: center; justify-content: center; overflow-y: auto; }
+        .video-wrapper { position: relative; background: #000; border-radius: 15px; overflow: hidden; aspect-ratio: 16/9; border: 3px solid var(--gray); width: 100%; max-width: 450px; transition: 0.3s; }
         
-        /* VÒNG NHẬN BIẾT NGƯỜI NÓI */
-        .speaking { border-color: var(--gold) !important; box-shadow: 0 0 20px var(--gold); transform: scale(1.02); }
+        /* HIỆU ỨNG NGƯỜI NÓI */
+        .speaking { border-color: var(--gold) !important; box-shadow: 0 0 15px var(--gold); transform: scale(1.02); }
 
         /* SIDEBAR CHAT */
-        #chat-section { width: 320px; display: flex; flex-direction: column; background: var(--navy); border-left: 1px solid var(--gray); transition: 0.3s; }
+        #chat-section { width: 300px; display: flex; flex-direction: column; background: var(--navy); border-left: 1px solid var(--gray); transition: 0.3s; }
         #chat-section.hidden { width: 0; overflow: hidden; border: none; }
-        #chat-messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
-        .msg-bubble { max-width: 85%; padding: 10px; border-radius: 15px; font-size: 13px; }
+        #chat-messages { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+        .msg { padding: 8px 12px; border-radius: 15px; font-size: 13px; max-width: 85%; }
         .msg-me { align-self: flex-end; background: var(--cyan); color: var(--bg); }
         .msg-them { align-self: flex-start; background: var(--gray); color: white; }
 
         /* TOOLBAR */
-        .toolbar { height: 85px; background: var(--navy); display: flex; justify-content: center; align-items: center; gap: 12px; border-top: 1px solid var(--gray); }
+        .toolbar { height: 80px; background: var(--navy); display: flex; justify-content: center; align-items: center; gap: 10px; border-top: 1px solid var(--gray); }
         .btn-tool { width: 45px; height: 45px; border-radius: 50%; border: none; cursor: pointer; background: var(--gray); color: white; font-size: 18px; }
         .btn-tool.active { background: var(--red); }
-        .btn-end { background: var(--red); padding: 10px 20px; border-radius: 20px; font-weight: bold; border: none; color: white; cursor: pointer; }
     </style>
 </head>
 <body oncontextmenu="return false;">
 
 <div id="home-screen">
     <div class="home-box">
-        <h2 style="color: var(--gold);">DTU MEET PRO</h2>
-        <input type="text" id="userName" placeholder="Tên của bạn..." style="width:100%; padding:10px; margin-bottom:10px; border-radius:5px; border:none;">
-        <button class="btn-main" style="background:var(--cyan); color:var(--bg);" onclick="startApp(true)">TẠO PHÒNG MỚI</button>
-        <div style="margin:10px 0; opacity:0.5;">-- HOẶC --</div>
-        <input type="text" id="roomInput" placeholder="Nhập mã 6 số để vào..." style="width:100%; padding:10px; margin-bottom:10px; border-radius:5px; border:none;">
-        <button class="btn-main" style="background:transparent; border:1px solid var(--cyan); color:var(--cyan);" onclick="startApp(false)">VÀO PHÒNG</button>
+        <h2 style="color: var(--gold); margin:0;">DTU MEET PRO</h2>
+        <p style="font-size:12px; opacity:0.6;">Đồ án Tốt nghiệp - Tân DTU</p>
+        <input type="text" id="userName" placeholder="Tên của bạn..." autocomplete="off">
+        <button onclick="startApp(true)" style="width:100%; padding:12px; background:var(--cyan); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">TẠO PHÒNG MỚI</button>
+        <div style="margin:10px 0; font-size:12px; opacity:0.5;">-- HOẶC --</div>
+        <input type="text" id="roomInput" placeholder="Nhập mã 6 số...">
+        <button onclick="startApp(false)" style="width:100%; padding:12px; background:transparent; border:1px solid var(--cyan); color:var(--cyan); border-radius:8px; cursor:pointer;">VÀO PHÒNG</button>
     </div>
 </div>
 
 <div id="app-container">
     <div id="video-section">
         <div class="info-bar">
-            <div class="info-item" onclick="copyRoomCode()" title="Bấm để copy mã">🔑 PHÒNG: <span id="room-display">------</span></div>
-            <div class="info-item" style="color:white;">⏱ <span id="clock">00:00</span></div>
-            <div class="info-item">👥 <span id="user-count">1</span> người</div>
+            <div class="info-item" onclick="copyCode()">🔑 PHÒNG: <span id="room-display">------</span> (Bấm để copy)</div>
+            <div class="info-item">👥 <span id="user-total">1</span> người</div>
         </div>
-
         <div id="video-grid"></div>
-
         <div class="toolbar">
             <button class="btn-tool" id="micBtn" onclick="toggleMic()">🎤</button>
             <button class="btn-tool" id="camBtn" onclick="toggleCam()">📷</button>
             <button class="btn-tool" onclick="toggleChat()">💬</button>
             <button class="btn-tool" id="shareBtn" onclick="toggleShare()">🖥️</button>
-            <button class="btn-end" onclick="location.reload()">Rời khỏi</button>
-            <button class="btn-end" id="adminBtn" style="display:none; background:#8b0000;" onclick="location.reload()">Kết thúc cuộc họp</button>
+            <button onclick="location.reload()" style="background:var(--red); color:white; border:none; padding:10px 20px; border-radius:20px; cursor:pointer; font-weight:bold;">KẾT THÚC</button>
         </div>
     </div>
 
     <div id="chat-section" class="hidden">
-        <div style="padding:15px; font-weight:bold; border-bottom:1px solid var(--gray); color:var(--cyan);">HỘI THOẠI</div>
+        <div style="padding:15px; font-weight:bold; border-bottom:1px solid var(--gray); color:var(--cyan);">CHAT BOX</div>
         <div id="chat-messages"></div>
-        <div style="padding:15px; display:flex; gap:5px; border-top:1px solid var(--gray);">
-            <input type="text" id="chatInput" placeholder="Nhập tin nhắn..." style="flex:1; padding:10px; border-radius:20px; border:none; outline:none; background:var(--gray); color:white;">
-            <button onclick="sendChat()" style="background:var(--cyan); border:none; border-radius:50%; width:35px; height:35px; cursor:pointer;">➤</button>
+        <div style="padding:10px; display:flex; gap:5px;">
+            <input type="text" id="chatInput" placeholder="Nhập tin nhắn..." style="flex:1; padding:8px; border-radius:15px; border:none; outline:none; background:var(--gray); color:white;">
+            <button onclick="sendChat()" style="background:var(--cyan); border:none; border-radius:50%; width:35px; height:35px;">➤</button>
         </div>
     </div>
 </div>
 
 <script>
-    let localStream, peer, roomCode, myName, isAdmin = false;
+    let localStream, peer, myName, roomCode, isAdmin = false;
+    const peerConnections = {};
 
-    // Chống F12
+    // Cấm F12
     document.onkeydown = e => { if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || (e.ctrlKey && e.keyCode == 85)) return false; };
 
     async function startApp(isCreate) {
-        myName = document.getElementById('userName').value || "Người dùng";
+        myName = document.getElementById('userName').value || "User";
         isAdmin = isCreate;
         roomCode = isCreate ? Math.floor(100000 + Math.random() * 900000).toString() : document.getElementById('roomInput').value;
-        
+
         if(!roomCode || roomCode.length < 6) return alert("Mã phòng không hợp lệ!");
 
         try {
-            // Noise Suppression mặc định
             localStream = await navigator.mediaDevices.getUserMedia({ 
                 video: true, 
                 audio: { echoCancellation: true, noiseSuppression: true } 
             });
-
+            
             document.getElementById('home-screen').style.display = 'none';
             document.getElementById('app-container').style.display = 'flex';
             document.getElementById('room-display').innerText = roomCode;
-            if(isAdmin) document.getElementById('adminBtn').style.display = 'block';
 
             addVideo('me', localStream, myName + " (Bạn)");
-            setInterval(updateClock, 1000);
             initPeer();
-        } catch (e) { alert("Lỗi thiết bị!"); }
+        } catch (e) { alert("Vui lòng cấp quyền Camera/Mic và sử dụng HTTPS!"); }
     }
 
     function initPeer() {
-        // Sử dụng PeerServer để kết nối khác mạng
-        peer = new Peer('DTU-' + roomCode + '-' + (isAdmin ? 'ADMIN' : Math.random().toString(36).substr(2,4)));
-        
+        // CẤU HÌNH QUAN TRỌNG: Thêm STUN Server của Google để kết nối xuyên mạng
+        const config = {
+            config: {
+                'iceServers': [
+                    { 'urls': 'stun:stun.l.google.com:19302' },
+                    { 'urls': 'stun:stun1.l.google.com:19302' },
+                    { 'urls': 'stun:stun2.l.google.com:19302' }
+                ]
+            }
+        };
+
+        // ID cố định cho Admin để người khác dễ tìm
+        const myPeerId = isAdmin ? 'DTU-ROOM-' + roomCode : 'DTU-USER-' + Math.random().toString(36).substr(2, 5);
+        peer = new Peer(myPeerId, config);
+
+        peer.on('open', id => {
+            console.log("Peer ID của tôi:", id);
+            if (!isAdmin) {
+                // Nếu là người vào, tự động gọi cho Admin của phòng đó
+                const call = peer.call('DTU-ROOM-' + roomCode, localStream);
+                call.on('stream', remoteStream => addVideo('admin', remoteStream, "Chủ phòng"));
+            }
+        });
+
+        // Lắng nghe cuộc gọi đến (Admin nhận cuộc gọi từ thành viên)
         peer.on('call', call => {
             call.answer(localStream);
-            call.on('stream', stream => addVideo(call.peer, stream, "Người tham gia"));
+            call.on('stream', remoteStream => addVideo(call.peer, remoteStream, "Thành viên mới"));
         });
     }
 
@@ -137,14 +151,12 @@
         wrap.id = `wrap-${id}`;
         wrap.innerHTML = `
             <video id="vid-${id}" autoplay playsinline style="width:100%; height:100%; object-fit:cover;"></video>
-            <div style="position:absolute; bottom:10px; left:12px; background:rgba(0,0,0,0.6); padding:4px 10px; border-radius:10px; font-size:12px;">
-                ${label}
-            </div>
+            <div style="position:absolute; bottom:8px; left:10px; background:rgba(0,0,0,0.6); padding:3px 10px; border-radius:8px; font-size:11px;">${label}</div>
         `;
         grid.appendChild(wrap);
         document.getElementById(`vid-${id}`).srcObject = stream;
         detectVoice(stream, id);
-        updateCount();
+        updateUserCount();
     }
 
     function detectVoice(stream, id) {
@@ -152,34 +164,27 @@
         const analyser = audioCtx.createAnalyser();
         audioCtx.createMediaStreamSource(stream).connect(analyser);
         const data = new Uint8Array(analyser.frequencyBinCount);
-        
-        const loop = () => {
+        const check = () => {
             analyser.getByteFrequencyData(data);
             let volume = data.reduce((a, b) => a + b) / data.length;
             const el = document.getElementById(`wrap-${id}`);
             if(el) {
-                // VÒNG NHẬN BIẾT NGƯỜI NÓI
-                if(volume > 35) el.classList.add('speaking');
+                if(volume > 35) el.classList.add('speaking'); // HIỆN VIỀN VÀNG KHI NÓI
                 else el.classList.remove('speaking');
-                requestAnimationFrame(loop);
+                requestAnimationFrame(check);
             }
         };
-        loop();
+        check();
     }
 
-    function copyRoomCode() {
+    function copyCode() {
         navigator.clipboard.writeText(roomCode);
         alert("Đã copy mã phòng: " + roomCode);
     }
 
     function toggleChat() { document.getElementById('chat-section').classList.toggle('hidden'); }
-    function updateCount() { document.getElementById('user-count').innerText = document.querySelectorAll('.video-wrapper').length; }
-    function updateClock() {
-        let diff = Math.floor((Date.now() - (window.startTime || Date.now())) / 1000);
-        let m = Math.floor(diff/60); let s = diff%60;
-        document.getElementById('clock').innerText = `${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
-    }
-
+    function updateUserCount() { document.getElementById('user-total').innerText = document.querySelectorAll('.video-wrapper').length; }
+    
     function toggleMic() {
         localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled;
         document.getElementById('micBtn').classList.toggle('active');
@@ -195,7 +200,7 @@
     function sendChat() {
         const input = document.getElementById('chatInput');
         if(!input.value) return;
-        document.getElementById('chat-messages').innerHTML += `<div class="msg-bubble msg-me">${input.value}</div>`;
+        document.getElementById('chat-messages').innerHTML += `<div class="msg msg-me">${input.value}</div>`;
         input.value = "";
         document.getElementById('chat-messages').scrollTop = 9999;
     }
