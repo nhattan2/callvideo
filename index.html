@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>DTU MEET Pro - 2026 Final Edition</title>
+    <title>SECURE CONNECT - PRIVATE BRIDGE</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root { --bg: #0a192f; --gold: #ffd700; --navy: #112240; --cyan: #64ffda; --red: #ff4d4d; --gray: #233554; }
@@ -12,8 +12,6 @@
         
         #video-grid { flex: 1; display: flex; flex-wrap: wrap; gap: 12px; padding: 75px 15px 15px 15px; align-content: center; justify-content: center; overflow-y: auto; }
         .video-wrapper { position: relative; background: #000; border-radius: 12px; overflow: hidden; aspect-ratio: 16/9; border: 2px solid var(--gray); width: 100%; max-width: 420px; transition: 0.3s; }
-        
-        /* Hiệu ứng khung vàng khi nói */
         .speaking { border-color: var(--gold) !important; box-shadow: 0 0 15px var(--gold); }
 
         .toolbar { 
@@ -23,7 +21,6 @@
         .btn-tool { position: relative; width: 46px; height: 46px; border-radius: 50%; border: none; cursor: pointer; background: var(--gray); color: white; font-size: 20px; display: flex; align-items: center; justify-content: center; }
         .btn-tool.off { background: var(--red); }
         
-        /* Badge tin nhắn chưa đọc */
         #chat-badge { 
             position: absolute; top: -5px; right: -5px; background: var(--red); color: white; 
             font-size: 10px; min-width: 18px; height: 18px; border-radius: 50%; 
@@ -37,7 +34,6 @@
         .msg-me { align-self: flex-end; background: var(--cyan); color: var(--bg); }
         .msg-them { align-self: flex-start; background: var(--gray); color: white; }
 
-        /* Icon Animation 10s */
         .reaction-overlay {
             position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
             font-size: 60px; pointer-events: none; z-index: 10;
@@ -57,7 +53,6 @@
             flex-wrap: wrap; max-width: 250px; justify-content: center;
         }
         .icon-item { cursor: pointer; font-size: 26px; transition: 0.2s; }
-        .icon-item:hover { transform: scale(1.3); }
 
         @media (max-width: 768px) { #chat-section { position: fixed; inset: 0; width: 100%; z-index: 2000; } }
     </style>
@@ -66,12 +61,12 @@
 
 <div id="home-screen" style="position:fixed; inset:0; background:var(--bg); z-index:5000; display:flex; align-items:center; justify-content:center; padding:20px;">
     <div style="background:var(--navy); padding:25px; border-radius:20px; width:100%; max-width:360px; border:1px solid var(--cyan); text-align:center;">
-        <h2 style="color:var(--gold); margin-bottom: 20px;">DTU MEET PRO</h2>
-        <input type="text" id="userName" autocomplete="off" placeholder="Tên của bạn..." style="width:100%; padding:12px; margin-bottom:12px; border-radius:8px; border:none; background:#0d1b2a; color:white; outline:none;">
-        <button onclick="startApp(true)" style="width:100%; padding:12px; background:var(--cyan); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">TẠO PHÒNG MỚI</button>
-        <div style="margin:10px 0; opacity:0.5;">-- HOẶC --</div>
-        <input type="text" id="roomInput" autocomplete="off" inputmode="numeric" placeholder="Nhập mã 6 số..." style="width:100%; padding:12px; margin-bottom:12px; border-radius:8px; border:none; background:#0d1b2a; color:white; outline:none;">
-        <button onclick="startApp(false)" style="width:100%; padding:12px; background:transparent; border:1px solid var(--cyan); color:var(--cyan); border-radius:8px; cursor:pointer;">VÀO PHÒNG</button>
+        <h2 style="color:var(--gold); margin-bottom: 20px;">PRIVATE BRIDGE</h2>
+        <input type="text" id="userName" autocomplete="off" spellcheck="false" placeholder="Identity..." style="width:100%; padding:12px; margin-bottom:12px; border-radius:8px; border:none; background:#0d1b2a; color:white; outline:none;">
+        <button onclick="startApp(true)" style="width:100%; padding:12px; background:var(--cyan); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">CREATE BRIDGE</button>
+        <div style="margin:10px 0; opacity:0.5;">-- ACCESS --</div>
+        <input type="text" id="roomInput" autocomplete="off" spellcheck="false" inputmode="numeric" placeholder="6-digit code..." style="width:100%; padding:12px; margin-bottom:12px; border-radius:8px; border:none; background:#0d1b2a; color:white; outline:none;">
+        <button onclick="startApp(false)" style="width:100%; padding:12px; background:transparent; border:1px solid var(--cyan); color:var(--cyan); border-radius:8px; cursor:pointer;">JOIN BRIDGE</button>
     </div>
 </div>
 
@@ -102,18 +97,18 @@
                 💬 <div id="chat-badge">0</div>
             </button>
             <button class="btn-tool" id="reactionBtn" onclick="toggleIconMenu()">😊</button>
-            <button onclick="location.reload()" style="background:var(--red); color:white; border:none; padding:10px 20px; border-radius:20px; font-weight:bold; cursor:pointer;">KẾT THÚC</button>
+            <button onclick="location.reload()" style="background:var(--red); color:white; border:none; padding:10px 20px; border-radius:20px; font-weight:bold; cursor:pointer;">DISCONNECT</button>
         </div>
     </div>
 
     <div id="chat-section" class="hidden">
         <div style="padding:15px; font-weight:bold; border-bottom:1px solid var(--gray); display:flex; justify-content:space-between; color:var(--cyan);">
-            <span>CHAT BOX</span>
+            <span>SECURE CHAT</span>
             <span onclick="toggleChat()" style="cursor:pointer; color:var(--red);">X</span>
         </div>
         <div id="chat-messages"></div>
         <div style="padding:15px; display:flex; gap:8px; border-top:1px solid var(--gray);">
-            <input type="text" id="chatInput" autocomplete="off" onkeydown="if(event.key==='Enter') sendChat()" placeholder="Nhập tin nhắn..." style="flex:1; padding:10px; border-radius:20px; border:none; background:var(--gray); color:white; outline:none;">
+            <input type="text" id="chatInput" autocomplete="off" spellcheck="false" onkeydown="if(event.key==='Enter') sendChat()" placeholder="Secure message..." style="flex:1; padding:10px; border-radius:20px; border:none; background:var(--gray); color:white; outline:none;">
             <button onclick="sendChat()" style="background:var(--cyan); border:none; border-radius:50%; width:40px; height:40px; cursor:pointer;">➤</button>
         </div>
     </div>
@@ -126,7 +121,7 @@
     const calls = {};
 
     async function startApp(isCreate) {
-        myName = document.getElementById('userName').value || "Người dùng";
+        myName = document.getElementById('userName').value || "Anonymous";
         isAdmin = isCreate;
         roomCode = isCreate ? Math.floor(100000 + Math.random() * 900000).toString() : document.getElementById('roomInput').value;
         if(!roomCode) return;
@@ -136,19 +131,19 @@
             document.getElementById('home-screen').style.display = 'none';
             document.getElementById('app-container').style.display = 'flex';
             document.getElementById('room-display').innerText = roomCode;
-            addVideo('me', localStream, myName + " (Bạn)");
+            addVideo('me', localStream, myName + " (You)");
             initPeer();
-        } catch (e) { alert("Lỗi: Hãy cấp quyền Camera/Mic!"); }
+        } catch (e) { alert("Access Denied: Camera/Mic required!"); }
     }
 
     function initPeer() {
-        const config = { config: { 'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }, { 'urls': 'stun:stun1.l.google.com:19302' }] } };
-        const myId = isAdmin ? `DTU-${roomCode}-ADMIN` : `DTU-${roomCode}-${Math.random().toString(36).substr(2, 5)}`;
-        peer = new Peer(myId, config);
+        // Gỡ bỏ STUN của Google để tăng tính riêng tư
+        const myId = isAdmin ? `SC-${roomCode}-MASTER` : `SC-${roomCode}-${Math.random().toString(36).substr(2, 5)}`;
+        peer = new Peer(myId);
 
         peer.on('open', id => {
             if (!isAdmin) {
-                const adminId = `DTU-${roomCode}-ADMIN`;
+                const adminId = `SC-${roomCode}-MASTER`;
                 const conn = peer.connect(adminId);
                 setupData(conn);
                 peer.call(adminId, localStream);
@@ -171,7 +166,7 @@
 
     function setupCall(call) {
         calls[call.peer] = call;
-        call.on('stream', stream => addVideo(call.peer, stream, "Thành viên"));
+        call.on('stream', stream => addVideo(call.peer, stream, "Node"));
         call.on('close', () => removeVideo(call.peer));
     }
 
@@ -201,7 +196,6 @@
         const wrap = document.createElement('div');
         wrap.className = 'video-wrapper';
         wrap.id = `wrap-${id}`;
-        
         wrap.innerHTML = `<video id="vid-${id}" autoplay playsinline style="width:100%; height:100%; object-fit:cover"></video>
                           <div style="position:absolute; bottom:8px; left:12px; background:rgba(0,0,0,0.6); padding:4px 10px; border-radius:8px; font-size:11px;">${label}</div>
                           <div id="react-${id}" style="position:absolute; inset:0; pointer-events:none;"></div>`;
@@ -232,7 +226,7 @@
         showReaction('me', icon);
         const data = { type: 'reaction', icon: icon };
         if (isAdmin) broadcast(data);
-        else if (conns[`DTU-${roomCode}-ADMIN`]) conns[`DTU-${roomCode}-ADMIN`].send(data);
+        else if (conns[`SC-${roomCode}-MASTER`]) conns[`SC-${roomCode}-MASTER`].send(data);
         toggleIconMenu();
     }
 
@@ -253,24 +247,22 @@
         const data = { type: 'chat', user: myName, msg: input.value };
         displayChat(myName, input.value, true);
         if (isAdmin) broadcast(data);
-        else if (conns[`DTU-${roomCode}-ADMIN`]) conns[`DTU-${roomCode}-ADMIN`].send(data);
+        else if (conns[`SC-${roomCode}-MASTER`]) conns[`SC-${roomCode}-MASTER`].send(data);
         input.value = "";
     }
 
     function displayChat(user, msg, isMe) {
         const chatBox = document.getElementById('chat-messages');
         const isChatHidden = document.getElementById('chat-section').classList.contains('hidden');
-        
         if (isChatHidden && !isMe) {
             unreadCount++;
             const badge = document.getElementById('chat-badge');
             badge.innerText = unreadCount;
             badge.style.display = 'flex';
         }
-
         const div = document.createElement('div');
         div.className = `msg ${isMe ? 'msg-me' : 'msg-them'}`;
-        div.innerHTML = `<b>${isMe?'Bạn':user}:</b> ${msg}`;
+        div.innerHTML = `<b>${isMe?'You':user}:</b> ${msg}`;
         chatBox.appendChild(div);
         chatBox.scrollTop = chatBox.scrollHeight;
     }
@@ -292,15 +284,11 @@
             source.connect(analyser);
             analyser.fftSize = 256;
             const data = new Uint8Array(analyser.frequencyBinCount);
-
             const frame = () => {
                 analyser.getByteFrequencyData(data);
                 let vol = data.reduce((a, b) => a + b) / data.length;
                 const wrap = document.getElementById(`wrap-${id}`);
-                if (wrap) { 
-                    wrap.classList.toggle('speaking', vol > 35); 
-                    requestAnimationFrame(frame); 
-                }
+                if (wrap) { wrap.classList.toggle('speaking', vol > 35); requestAnimationFrame(frame); }
             };
             frame();
         } catch(e) {}
@@ -309,7 +297,7 @@
     function toggleMic() { localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled; document.getElementById('micBtn').classList.toggle('off', !localStream.getAudioTracks()[0].enabled); }
     function toggleCam() { localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled; document.getElementById('camBtn').classList.toggle('off', !localStream.getVideoTracks()[0].enabled); }
     function updateCount() { document.getElementById('user-count').innerText = document.querySelectorAll('.video-wrapper').length; }
-    function copyCode() { navigator.clipboard.writeText(roomCode); alert("Đã copy mã: " + roomCode); }
+    function copyCode() { navigator.clipboard.writeText(roomCode); alert("Bridge Code Copied!"); }
 </script>
 </body>
 </html>
