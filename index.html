@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DTU MEET Pro - Full Sync</title>
+    <title>DTU MEET Pro - Full Sync Display</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root { --bg: #0a192f; --gold: #ffd700; --navy: #112240; --cyan: #64ffda; --red: #ff4d4d; --gray: #233554; }
@@ -18,11 +18,13 @@
         #app-container { display: none; height: 100vh; flex-direction: row; }
         #video-section { flex: 1; display: flex; flex-direction: column; position: relative; }
         
+        /* THANH THÔNG TIN */
         .info-bar { position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; z-index: 1000; pointer-events: none; }
         .info-item { background: rgba(17, 34, 64, 0.9); padding: 8px 15px; border-radius: 10px; border: 1px solid var(--cyan); color: var(--gold); pointer-events: auto; cursor: pointer; font-size: 13px; font-weight: bold; }
 
+        /* GRID VIDEO */
         #video-grid { flex: 1; display: flex; flex-wrap: wrap; gap: 15px; padding: 70px 20px 20px 20px; align-content: center; justify-content: center; overflow-y: auto; }
-        .video-wrapper { position: relative; background: #000; border-radius: 15px; overflow: hidden; aspect-ratio: 16/9; border: 3px solid var(--gray); width: 100%; max-width: 450px; transition: 0.3s; }
+        .video-wrapper { position: relative; background: #000; border-radius: 15px; overflow: hidden; aspect-ratio: 16/9; border: 3px solid var(--gray); width: 100%; max-width: 480px; transition: 0.3s; }
         .speaking { border-color: var(--gold) !important; box-shadow: 0 0 15px var(--gold); }
 
         /* CHAT SECTION */
@@ -71,7 +73,7 @@
     <div id="chat-section" class="hidden">
         <div style="padding:15px; font-weight:bold; border-bottom:1px solid var(--gray); color:var(--cyan);">CHAT BOX</div>
         <div id="chat-messages"></div>
-        <div style="padding:10px; display:flex; gap:5px;">
+        <div style="padding:10px; display:flex; gap:5px; border-top:1px solid var(--gray);">
             <input type="text" id="chatInput" placeholder="Nhập tin nhắn..." style="flex:1; padding:8px; border-radius:15px; border:none; outline:none; background:var(--gray); color:white;">
             <button onclick="sendChat()" style="background:var(--cyan); border:none; border-radius:50%; width:35px; height:35px; cursor:pointer;">➤</button>
         </div>
@@ -80,70 +82,63 @@
 
 <script>
     let localStream, peer, myName, roomCode, isAdmin = false;
-    const connections = {}; // Lưu trữ tất cả DataConnections để broadcast tin nhắn
+    const calls = {}; // Lưu trữ các cuộc gọi để quản lý luồng media
+    const conns = {}; // Lưu trữ các DataConnection cho chat
 
+    // Chống soi code
     document.onkeydown = e => { if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || (e.ctrlKey && e.keyCode == 85)) return false; };
 
     async function startApp(isCreate) {
         myName = document.getElementById('userName').value || "User";
         isAdmin = isCreate;
         roomCode = isCreate ? Math.floor(100000 + Math.random() * 900000).toString() : document.getElementById('roomInput').value;
-        if(!roomCode || roomCode.length < 6) return alert("Mã phòng không hợp lệ!");
 
         try {
-            localStream = await navigator.mediaDevices.getUserMedia({ 
-                video: true, 
-                audio: { echoCancellation: true, noiseSuppression: true } 
-            });
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: { echoCancellation: true, noiseSuppression: true } });
             document.getElementById('home-screen').style.display = 'none';
             document.getElementById('app-container').style.display = 'flex';
             document.getElementById('room-display').innerText = roomCode;
             addVideo('me', localStream, myName + " (Bạn)");
             initPeer();
-        } catch (e) { alert("Vui lòng sử dụng HTTPS và cấp quyền Camera/Mic!"); }
+        } catch (e) { alert("Lỗi: Cần HTTPS và quyền thiết bị!"); }
     }
 
     function initPeer() {
         const config = { config: { 'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }, { 'urls': 'stun:stun1.l.google.com:19302' }] } };
-        const myId = isAdmin ? 'DTU-ROOM-' + roomCode : 'DTU-USER-' + Math.random().toString(36).substr(2, 5);
+        const myId = isAdmin ? 'DTU-' + roomCode + '-ADMIN' : 'DTU-' + roomCode + '-' + Math.random().toString(36).substr(2, 5);
         peer = new Peer(myId, config);
 
         peer.on('open', id => {
             if (!isAdmin) {
-                const adminId = 'DTU-ROOM-' + roomCode;
-                // Kết nối Data để Chat
+                const adminId = 'DTU-' + roomCode + '-ADMIN';
+                const call = peer.call(adminId, localStream);
+                setupCall(call);
                 const conn = peer.connect(adminId);
-                setupDataConn(conn);
-                // Kết nối Media để gọi
-                peer.call(adminId, localStream);
+                setupData(conn);
             }
         });
 
-        // Nhận kết nối Data
-        peer.on('connection', conn => setupDataConn(conn));
-
-        // Nhận cuộc gọi
         peer.on('call', call => {
             call.answer(localStream);
-            call.on('stream', stream => addVideo(call.peer, stream, "Người tham gia"));
+            setupCall(call);
         });
+
+        peer.on('connection', conn => setupData(conn));
     }
 
-    function setupDataConn(conn) {
-        connections[conn.peer] = conn;
+    function setupCall(call) {
+        calls[call.peer] = call;
+        call.on('stream', stream => addVideo(call.peer, stream, "Người tham gia"));
+    }
+
+    function setupData(conn) {
+        conns[conn.peer] = conn;
         conn.on('data', data => {
             if (data.type === 'chat') {
                 displayChat(data.user, data.msg, false);
                 if (isAdmin) broadcast({ type: 'chat', user: data.user, msg: data.msg }, conn.peer);
             }
         });
-        conn.on('close', () => delete connections[conn.peer]);
-    }
-
-    function broadcast(data, excludePeer) {
-        for (let id in connections) {
-            if (id !== excludePeer) connections[id].send(data);
-        }
     }
 
     function addVideo(id, stream, label) {
@@ -153,13 +148,13 @@
         wrap.className = 'video-wrapper';
         wrap.id = `wrap-${id}`;
         
-        // Fix cắt khúc: Share màn hình dùng contain, Camera dùng cover
+        // LUỒNG SHARE: Hiển thị TOÀN THẺ (Contain), CAMERA: Hiển thị ĐẦY (Cover)
         const isShare = id.includes('share');
-        const videoStyle = isShare ? "object-fit: contain;" : "object-fit: cover;";
+        const videoStyle = isShare ? "object-fit: contain; background: #000;" : "object-fit: cover;";
 
         wrap.innerHTML = `
             <video id="vid-${id}" autoplay playsinline style="width:100%; height:100%; ${videoStyle}"></video>
-            <div style="position:absolute; bottom:8px; left:10px; background:rgba(0,0,0,0.6); padding:3px 10px; border-radius:8px; font-size:11px;">${label}</div>
+            <div style="position:absolute; bottom:8px; left:10px; background:rgba(0,0,0,0.6); padding:3px 10px; border-radius:8px; font-size:11px; z-index:10;">${label}</div>
         `;
         grid.appendChild(wrap);
         document.getElementById(`vid-${id}`).srcObject = stream;
@@ -167,15 +162,34 @@
         updateUserCount();
     }
 
+    async function toggleShare() {
+        try {
+            const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+            addVideo('share-me', screenStream, "Bạn đang chia sẻ");
+
+            // Broadcast luồng share tới TẤT CẢ mọi người trong phòng
+            for (let peerId in conns) {
+                peer.call(peerId, screenStream, { metadata: { type: 'share' } });
+            }
+
+            screenStream.getVideoTracks()[0].onended = () => {
+                document.getElementById('wrap-share-me').remove();
+                updateUserCount();
+            };
+        } catch (e) { console.error("Hủy share màn hình"); }
+    }
+
+    function broadcast(data, excludePeer) {
+        for (let id in conns) { if (id !== excludePeer) conns[id].send(data); }
+    }
+
     function sendChat() {
         const input = document.getElementById('chatInput');
         if (!input.value) return;
-        const msgData = { type: 'chat', user: myName, msg: input.value };
-        
+        const data = { type: 'chat', user: myName, msg: input.value };
         displayChat(myName, input.value, true);
-        if (isAdmin) broadcast(msgData);
-        else if (connections['DTU-ROOM-' + roomCode]) connections['DTU-ROOM-' + roomCode].send(msgData);
-        
+        if (isAdmin) broadcast(data);
+        else if (conns['DTU-' + roomCode + '-ADMIN']) conns['DTU-' + roomCode + '-ADMIN'].send(data);
         input.value = "";
     }
 
@@ -188,7 +202,7 @@
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    // Các hàm phụ trợ
+    // Các tính năng bổ trợ
     function detectVoice(stream, id) {
         const audioCtx = new AudioContext();
         const analyser = audioCtx.createAnalyser();
@@ -202,17 +216,11 @@
         };
         check();
     }
-    function copyCode() { navigator.clipboard.writeText(roomCode); alert("Đã copy: " + roomCode); }
+    function copyCode() { navigator.clipboard.writeText(roomCode); alert("Đã copy mã phòng!"); }
     function toggleChat() { document.getElementById('chat-section').classList.toggle('hidden'); }
     function updateUserCount() { document.getElementById('user-total').innerText = document.querySelectorAll('.video-wrapper').length; }
     function toggleMic() { localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled; document.getElementById('micBtn').classList.toggle('active'); }
     function toggleCam() { localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled; document.getElementById('camBtn').classList.toggle('active'); }
-    async function toggleShare() {
-        const screen = await navigator.mediaDevices.getDisplayMedia({ video: true });
-        addVideo('share-me', screen, "Màn hình đang chia sẻ");
-        // Gửi stream share cho mọi người
-        for (let id in connections) peer.call(id, screen);
-    }
 </script>
 </body>
 </html>
