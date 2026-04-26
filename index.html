@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>DTU MEET Pro - Custom Timer & Control</title>
+    <title>DTU MEET Pro - Audio Fixed</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root { --bg: #0a192f; --gold: #ffd700; --navy: #112240; --cyan: #64ffda; --red: #ff4d4d; --gray: #233554; }
@@ -14,7 +14,11 @@
         .video-wrapper { position: relative; background: #000; border-radius: 15px; overflow: hidden; aspect-ratio: 16/9; border: 3px solid var(--gray); width: 100%; max-width: 450px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         
         .speaking { border-color: var(--gold) !important; box-shadow: 0 0 15px var(--gold); }
-        .avatar { width: 80px; height: 80px; background: var(--gray); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; color: var(--cyan); border: 2px solid var(--cyan); text-transform: uppercase; }
+        .avatar { width: 85px; height: 85px; background: var(--gray); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 35px; color: var(--cyan); border: 2px solid var(--cyan); text-transform: uppercase; z-index: 2; }
+
+        /* Video ẩn nhưng vẫn phải hiện diện để phát tiếng */
+        video { position: absolute; width: 100%; height: 100%; object-fit: cover; z-index: 1; opacity: 0; transition: 0.3s; }
+        .show-video video { opacity: 1; }
 
         .info-bar { position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; z-index: 1000; pointer-events: none; }
         .info-item { background: rgba(17, 34, 64, 0.95); padding: 8px 15px; border-radius: 10px; border: 1px solid var(--cyan); color: var(--gold); pointer-events: auto; font-weight: bold; }
@@ -28,28 +32,25 @@
         #chat-messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
         .msg { padding: 8px 12px; border-radius: 15px; font-size: 13px; max-width: 85%; word-wrap: break-word; }
         .msg-me { align-self: flex-end; background: var(--cyan); color: var(--bg); }
-
-        @media (max-width: 768px) { #chat-section { position: fixed; inset: 0; width: 100%; z-index: 2000; } }
     </style>
 </head>
 <body oncontextmenu="return false;">
+
+<audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3"></audio>
 
 <div id="home-screen" style="position:fixed; inset:0; background:var(--bg); z-index:5000; display:flex; align-items:center; justify-content:center; padding:20px;">
     <div style="background:var(--navy); padding:25px; border-radius:20px; width:100%; max-width:380px; border:1px solid var(--cyan); text-align:center;">
         <h2 style="color:var(--gold); margin-bottom: 20px;">DTU MEET PRO</h2>
         <input type="text" id="userName" placeholder="Tên của bạn..." style="width:100%; padding:12px; margin-bottom:12px; border-radius:8px; border:none; background:#0d1b2a; color:white; border:1px solid var(--gray);">
         
-        <div style="display:flex; gap:10px; margin-bottom:15px;">
-            <select id="callMode" style="flex:1; padding:10px; border-radius:8px; background:#0d1b2a; color:white; border:1px solid var(--gray);">
-                <option value="video">🎥 Chế độ Video</option>
-                <option value="voice">📞 Chế độ Thoại</option>
-            </select>
-        </div>
+        <select id="callMode" style="width:100%; padding:10px; border-radius:8px; background:#0d1b2a; color:white; border:1px solid var(--gray); margin-bottom:12px;">
+            <option value="video">🎥 Chế độ Video</option>
+            <option value="voice">📞 Chế độ Thoại</option>
+        </select>
 
         <div style="margin-bottom: 15px; text-align: left;">
-            <label style="font-size: 12px; color: var(--cyan); margin-left: 5px;">Hẹn giờ cuộc gọi:</label>
-            <div style="display: flex; gap: 5px; margin-top: 5px;">
-                <input type="number" id="timeValue" placeholder="Nhập số..." style="flex:2; padding:10px; border-radius:8px; border:none; background:#0d1b2a; color:white; border:1px solid var(--gray);">
+            <div style="display: flex; gap: 5px;">
+                <input type="number" id="timeValue" placeholder="Thời gian..." style="flex:2; padding:10px; border-radius:8px; border:none; background:#0d1b2a; color:white; border:1px solid var(--gray);">
                 <select id="timeUnit" style="flex:1.5; padding:10px; border-radius:8px; background:#0d1b2a; color:white; border:1px solid var(--gray);">
                     <option value="none">Vô hạn</option>
                     <option value="m">Phút</option>
@@ -91,7 +92,7 @@
 </div>
 
 <script>
-    let localStream, peer, myName, roomCode, isAdmin = false, unreadCount = 0, isVoiceOnlyMode = false;
+    let localStream, peer, myName, roomCode, isAdmin = false, isVoiceOnly = false;
     const conns = {}, calls = {};
 
     document.addEventListener('keydown', e => { if (e.target.id === 'chatInput' && e.key === 'Enter') { e.preventDefault(); sendChat(); } });
@@ -99,17 +100,17 @@
     async function startApp(isCreate) {
         myName = document.getElementById('userName').value || "User";
         isAdmin = isCreate;
-        isVoiceOnlyMode = document.getElementById('callMode').value === 'voice';
+        isVoiceOnly = document.getElementById('callMode').value === 'voice';
         roomCode = isCreate ? Math.floor(100000 + Math.random() * 900000).toString() : document.getElementById('roomInput').value;
-        
         const timeVal = parseInt(document.getElementById('timeValue').value);
         const timeUnit = document.getElementById('timeUnit').value;
 
         if(!roomCode) return;
 
         try {
+            // FIX: Video call mới xin quyền Cam, Voice Call chỉ xin quyền Mic
             localStream = await navigator.mediaDevices.getUserMedia({ 
-                video: isVoiceOnlyMode ? false : true, 
+                video: isVoiceOnly ? false : true, 
                 audio: true 
             });
 
@@ -118,24 +119,21 @@
             document.getElementById('room-display').innerText = roomCode;
             
             addVideo('me', localStream, myName + " (Bạn)");
-            
-            // Xử lý đếm ngược nếu là Admin và có nhập thời gian
-            if(isAdmin && timeUnit !== 'none' && !isNaN(timeVal)) {
-                let totalSeconds = timeUnit === 'm' ? timeVal * 60 : timeVal * 3600;
-                const display = document.getElementById('timer-display');
-                display.style.display = 'block';
-                const timer = setInterval(() => {
-                    totalSeconds--;
-                    let h = Math.floor(totalSeconds / 3600);
-                    let m = Math.floor((totalSeconds % 3600) / 60);
-                    let s = totalSeconds % 60;
-                    display.innerText = `⏱ ${h > 0 ? h + ':' : ''}${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
-                    if(totalSeconds <= 0) { clearInterval(timer); location.reload(); }
-                }, 1000);
-            }
-            
+            if(isAdmin && timeUnit !== 'none' && !isNaN(timeVal)) setupTimer(timeVal, timeUnit);
             initPeer();
-        } catch (e) { alert("Lỗi thiết bị!"); }
+        } catch (e) { alert("Lỗi: Không tìm thấy Mic/Cam!"); }
+    }
+
+    function setupTimer(val, unit) {
+        let sec = unit === 'm' ? val * 60 : val * 3600;
+        const el = document.getElementById('timer-display');
+        el.style.display = 'block';
+        const t = setInterval(() => {
+            sec--;
+            let m = Math.floor(sec/60), s = sec%60;
+            el.innerText = `⏱ ${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
+            if(sec <= 0) { clearInterval(t); location.reload(); }
+        }, 1000);
     }
 
     function initPeer() {
@@ -170,7 +168,7 @@
         conns[conn.peer] = conn;
         conn.on('data', data => {
             if (data.type === 'chat') handleChat(data);
-            if (data.type === 'remote-control') {
+            if (data.type === 'remote') {
                 if(data.action === 'mic') toggleMic();
                 if(data.action === 'cam') toggleCam();
             }
@@ -189,23 +187,29 @@
         wrap.className = 'video-wrapper';
         wrap.id = `wrap-${id}`;
         
-        // CHỈ HIỂN THỊ AVATAR (Màn hình đen)
-        // Dù bật cam, video tag vẫn bị display:none, chỉ để stream chạy ngầm
+        // FIX: Luôn giữ video tag để phát âm thanh nhưng dùng opacity:0 để làm màn đen
         wrap.innerHTML = `<div class="avatar">${label.charAt(0)}</div>
-                           <video id="vid-${id}" autoplay playsinline muted style="display:none;"></video>
+                           <video id="vid-${id}" autoplay playsinline muted style="opacity:0;"></video>
                            <div style="position:absolute; bottom:8px; left:12px; background:rgba(0,0,0,0.6); padding:4px 10px; border-radius:8px; font-size:11px;">${label}</div>`;
         
-        // ADMIN CLICK ĐỂ ĐIỀU KHIỂN THÀNH VIÊN
+        // Chỉ hiện video lên nếu là chính mình hoặc được bật (logic hiển thị linh hoạt)
+        if (id === 'me') {
+            const vTrack = stream.getVideoTracks()[0];
+            if (vTrack && vTrack.enabled) wrap.classList.add('show-video');
+        }
+
         if(isAdmin && id !== 'me') {
             wrap.onclick = () => {
-                const act = confirm(`Điều khiển ${label}?\nOK: Bật/Tắt Mic\nCancel: Bật/Tắt Cam`);
-                const c = conns[id];
-                if(c) c.send({ type: 'remote-control', action: act ? 'mic' : 'cam' });
+                const act = confirm(`Điều khiển ${label}?\nOK: Mic | Cancel: Cam`);
+                if(conns[id]) conns[id].send({ type: 'remote', action: act ? 'mic' : 'cam' });
             };
         }
 
         grid.appendChild(wrap);
-        if (document.getElementById(`vid-${id}`)) document.getElementById(`vid-${id}`).srcObject = stream;
+        const vid = document.getElementById(`vid-${id}`);
+        vid.srcObject = stream;
+        if(id !== 'me') vid.muted = false; // Phải bật muted=false thì máy khách mới nghe được tiếng người khác
+
         detectVoice(stream, id);
         updateCount();
     }
@@ -216,17 +220,23 @@
     }
 
     function toggleCam() {
-        if(isVoiceOnlyMode) return;
+        if(isVoiceOnly) return;
         const t = localStream.getVideoTracks()[0];
-        if(t) { t.enabled = !t.enabled; document.getElementById('camBtn').classList.toggle('off', !t.enabled); }
+        if(t) { 
+            t.enabled = !t.enabled; 
+            document.getElementById('camBtn').classList.toggle('off', !t.enabled);
+            // Hiện/Ẩn video của chính mình
+            if(t.enabled) document.getElementById('wrap-me').classList.add('show-video');
+            else document.getElementById('wrap-me').classList.remove('show-video');
+        }
     }
 
     function handleChat(data) {
         displayChat(data.user, data.msg, false);
         if (document.getElementById('chat-section').classList.contains('hidden')) {
-            unreadCount++;
             const badge = document.getElementById('chat-badge');
-            badge.innerText = unreadCount; badge.style.display = 'flex';
+            badge.innerText = parseInt(badge.innerText) + 1;
+            badge.style.display = 'flex';
         }
         if (isAdmin) broadcast(data, data.from);
     }
@@ -251,7 +261,7 @@
     function toggleChat() { 
         document.getElementById('chat-section').classList.toggle('hidden'); 
         if(!document.getElementById('chat-section').classList.contains('hidden')) {
-            unreadCount = 0; document.getElementById('chat-badge').style.display = 'none';
+            const b = document.getElementById('chat-badge'); b.innerText = '0'; b.style.display = 'none';
         }
     }
     function detectVoice(s, id) {
