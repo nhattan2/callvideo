@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DTU MEET Pro - Global Connect Fix</title>
+    <title>DTU MEET Pro - Full Sync</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root { --bg: #0a192f; --gold: #ffd700; --navy: #112240; --cyan: #64ffda; --red: #ff4d4d; --gray: #233554; }
@@ -13,7 +13,6 @@
         /* GIAO DIỆN CHỜ */
         #home-screen { position: fixed; inset: 0; background: var(--bg); z-index: 5000; display: flex; align-items: center; justify-content: center; }
         .home-box { background: var(--navy); padding: 30px; border-radius: 20px; width: 380px; border: 1px solid var(--cyan); text-align: center; }
-        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid var(--gray); background: #0d1b2a; color: white; outline: none; }
 
         /* MÀN HÌNH CHÍNH */
         #app-container { display: none; height: 100vh; flex-direction: row; }
@@ -24,15 +23,13 @@
 
         #video-grid { flex: 1; display: flex; flex-wrap: wrap; gap: 15px; padding: 70px 20px 20px 20px; align-content: center; justify-content: center; overflow-y: auto; }
         .video-wrapper { position: relative; background: #000; border-radius: 15px; overflow: hidden; aspect-ratio: 16/9; border: 3px solid var(--gray); width: 100%; max-width: 450px; transition: 0.3s; }
-        
-        /* HIỆU ỨNG NGƯỜI NÓI */
-        .speaking { border-color: var(--gold) !important; box-shadow: 0 0 15px var(--gold); transform: scale(1.02); }
+        .speaking { border-color: var(--gold) !important; box-shadow: 0 0 15px var(--gold); }
 
-        /* SIDEBAR CHAT */
+        /* CHAT SECTION */
         #chat-section { width: 300px; display: flex; flex-direction: column; background: var(--navy); border-left: 1px solid var(--gray); transition: 0.3s; }
         #chat-section.hidden { width: 0; overflow: hidden; border: none; }
         #chat-messages { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
-        .msg { padding: 8px 12px; border-radius: 15px; font-size: 13px; max-width: 85%; }
+        .msg { padding: 8px 12px; border-radius: 15px; font-size: 13px; max-width: 85%; word-wrap: break-word; }
         .msg-me { align-self: flex-end; background: var(--cyan); color: var(--bg); }
         .msg-them { align-self: flex-start; background: var(--gray); color: white; }
 
@@ -47,8 +44,7 @@
 <div id="home-screen">
     <div class="home-box">
         <h2 style="color: var(--gold); margin:0;">DTU MEET PRO</h2>
-        <p style="font-size:12px; opacity:0.6;">Đồ án Tốt nghiệp - Tân DTU</p>
-        <input type="text" id="userName" placeholder="Tên của bạn..." autocomplete="off">
+        <input type="text" id="userName" placeholder="Tên của bạn..." autocomplete="off" style="width:100%; padding:10px; margin:10px 0; border-radius:8px; border:none;">
         <button onclick="startApp(true)" style="width:100%; padding:12px; background:var(--cyan); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">TẠO PHÒNG MỚI</button>
         <div style="margin:10px 0; font-size:12px; opacity:0.5;">-- HOẶC --</div>
         <input type="text" id="roomInput" placeholder="Nhập mã 6 số...">
@@ -59,7 +55,7 @@
 <div id="app-container">
     <div id="video-section">
         <div class="info-bar">
-            <div class="info-item" onclick="copyCode()">🔑 PHÒNG: <span id="room-display">------</span> (Bấm để copy)</div>
+            <div class="info-item" onclick="copyCode()">🔑 PHÒNG: <span id="room-display">------</span></div>
             <div class="info-item">👥 <span id="user-total">1</span> người</div>
         </div>
         <div id="video-grid"></div>
@@ -77,23 +73,21 @@
         <div id="chat-messages"></div>
         <div style="padding:10px; display:flex; gap:5px;">
             <input type="text" id="chatInput" placeholder="Nhập tin nhắn..." style="flex:1; padding:8px; border-radius:15px; border:none; outline:none; background:var(--gray); color:white;">
-            <button onclick="sendChat()" style="background:var(--cyan); border:none; border-radius:50%; width:35px; height:35px;">➤</button>
+            <button onclick="sendChat()" style="background:var(--cyan); border:none; border-radius:50%; width:35px; height:35px; cursor:pointer;">➤</button>
         </div>
     </div>
 </div>
 
 <script>
     let localStream, peer, myName, roomCode, isAdmin = false;
-    const peerConnections = {};
+    const connections = {}; // Lưu trữ tất cả DataConnections để broadcast tin nhắn
 
-    // Cấm F12
     document.onkeydown = e => { if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || (e.ctrlKey && e.keyCode == 85)) return false; };
 
     async function startApp(isCreate) {
         myName = document.getElementById('userName').value || "User";
         isAdmin = isCreate;
         roomCode = isCreate ? Math.floor(100000 + Math.random() * 900000).toString() : document.getElementById('roomInput').value;
-
         if(!roomCode || roomCode.length < 6) return alert("Mã phòng không hợp lệ!");
 
         try {
@@ -101,56 +95,70 @@
                 video: true, 
                 audio: { echoCancellation: true, noiseSuppression: true } 
             });
-            
             document.getElementById('home-screen').style.display = 'none';
             document.getElementById('app-container').style.display = 'flex';
             document.getElementById('room-display').innerText = roomCode;
-
             addVideo('me', localStream, myName + " (Bạn)");
             initPeer();
-        } catch (e) { alert("Vui lòng cấp quyền Camera/Mic và sử dụng HTTPS!"); }
+        } catch (e) { alert("Vui lòng sử dụng HTTPS và cấp quyền Camera/Mic!"); }
     }
 
     function initPeer() {
-        // CẤU HÌNH QUAN TRỌNG: Thêm STUN Server của Google để kết nối xuyên mạng
-        const config = {
-            config: {
-                'iceServers': [
-                    { 'urls': 'stun:stun.l.google.com:19302' },
-                    { 'urls': 'stun:stun1.l.google.com:19302' },
-                    { 'urls': 'stun:stun2.l.google.com:19302' }
-                ]
-            }
-        };
-
-        // ID cố định cho Admin để người khác dễ tìm
-        const myPeerId = isAdmin ? 'DTU-ROOM-' + roomCode : 'DTU-USER-' + Math.random().toString(36).substr(2, 5);
-        peer = new Peer(myPeerId, config);
+        const config = { config: { 'iceServers': [{ 'urls': 'stun:stun.l.google.com:19302' }, { 'urls': 'stun:stun1.l.google.com:19302' }] } };
+        const myId = isAdmin ? 'DTU-ROOM-' + roomCode : 'DTU-USER-' + Math.random().toString(36).substr(2, 5);
+        peer = new Peer(myId, config);
 
         peer.on('open', id => {
-            console.log("Peer ID của tôi:", id);
             if (!isAdmin) {
-                // Nếu là người vào, tự động gọi cho Admin của phòng đó
-                const call = peer.call('DTU-ROOM-' + roomCode, localStream);
-                call.on('stream', remoteStream => addVideo('admin', remoteStream, "Chủ phòng"));
+                const adminId = 'DTU-ROOM-' + roomCode;
+                // Kết nối Data để Chat
+                const conn = peer.connect(adminId);
+                setupDataConn(conn);
+                // Kết nối Media để gọi
+                peer.call(adminId, localStream);
             }
         });
 
-        // Lắng nghe cuộc gọi đến (Admin nhận cuộc gọi từ thành viên)
+        // Nhận kết nối Data
+        peer.on('connection', conn => setupDataConn(conn));
+
+        // Nhận cuộc gọi
         peer.on('call', call => {
             call.answer(localStream);
-            call.on('stream', remoteStream => addVideo(call.peer, remoteStream, "Thành viên mới"));
+            call.on('stream', stream => addVideo(call.peer, stream, "Người tham gia"));
         });
     }
 
+    function setupDataConn(conn) {
+        connections[conn.peer] = conn;
+        conn.on('data', data => {
+            if (data.type === 'chat') {
+                displayChat(data.user, data.msg, false);
+                if (isAdmin) broadcast({ type: 'chat', user: data.user, msg: data.msg }, conn.peer);
+            }
+        });
+        conn.on('close', () => delete connections[conn.peer]);
+    }
+
+    function broadcast(data, excludePeer) {
+        for (let id in connections) {
+            if (id !== excludePeer) connections[id].send(data);
+        }
+    }
+
     function addVideo(id, stream, label) {
-        if(document.getElementById(`wrap-${id}`)) return;
+        if (document.getElementById(`wrap-${id}`)) return;
         const grid = document.getElementById('video-grid');
         const wrap = document.createElement('div');
         wrap.className = 'video-wrapper';
         wrap.id = `wrap-${id}`;
+        
+        // Fix cắt khúc: Share màn hình dùng contain, Camera dùng cover
+        const isShare = id.includes('share');
+        const videoStyle = isShare ? "object-fit: contain;" : "object-fit: cover;";
+
         wrap.innerHTML = `
-            <video id="vid-${id}" autoplay playsinline style="width:100%; height:100%; object-fit:cover;"></video>
+            <video id="vid-${id}" autoplay playsinline style="width:100%; height:100%; ${videoStyle}"></video>
             <div style="position:absolute; bottom:8px; left:10px; background:rgba(0,0,0,0.6); padding:3px 10px; border-radius:8px; font-size:11px;">${label}</div>
         `;
         grid.appendChild(wrap);
@@ -159,6 +167,28 @@
         updateUserCount();
     }
 
+    function sendChat() {
+        const input = document.getElementById('chatInput');
+        if (!input.value) return;
+        const msgData = { type: 'chat', user: myName, msg: input.value };
+        
+        displayChat(myName, input.value, true);
+        if (isAdmin) broadcast(msgData);
+        else if (connections['DTU-ROOM-' + roomCode]) connections['DTU-ROOM-' + roomCode].send(msgData);
+        
+        input.value = "";
+    }
+
+    function displayChat(user, msg, isMe) {
+        const chatBox = document.getElementById('chat-messages');
+        const div = document.createElement('div');
+        div.className = `msg ${isMe ? 'msg-me' : 'msg-them'}`;
+        div.innerHTML = `<b>${isMe ? 'Bạn' : user}:</b> ${msg}`;
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    // Các hàm phụ trợ
     function detectVoice(stream, id) {
         const audioCtx = new AudioContext();
         const analyser = audioCtx.createAnalyser();
@@ -166,43 +196,22 @@
         const data = new Uint8Array(analyser.frequencyBinCount);
         const check = () => {
             analyser.getByteFrequencyData(data);
-            let volume = data.reduce((a, b) => a + b) / data.length;
+            let vol = data.reduce((a, b) => a + b) / data.length;
             const el = document.getElementById(`wrap-${id}`);
-            if(el) {
-                if(volume > 35) el.classList.add('speaking'); // HIỆN VIỀN VÀNG KHI NÓI
-                else el.classList.remove('speaking');
-                requestAnimationFrame(check);
-            }
+            if(el) { el.classList.toggle('speaking', vol > 35); requestAnimationFrame(check); }
         };
         check();
     }
-
-    function copyCode() {
-        navigator.clipboard.writeText(roomCode);
-        alert("Đã copy mã phòng: " + roomCode);
-    }
-
+    function copyCode() { navigator.clipboard.writeText(roomCode); alert("Đã copy: " + roomCode); }
     function toggleChat() { document.getElementById('chat-section').classList.toggle('hidden'); }
     function updateUserCount() { document.getElementById('user-total').innerText = document.querySelectorAll('.video-wrapper').length; }
-    
-    function toggleMic() {
-        localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled;
-        document.getElementById('micBtn').classList.toggle('active');
-    }
-    function toggleCam() {
-        localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled;
-        document.getElementById('camBtn').classList.toggle('active');
-    }
+    function toggleMic() { localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled; document.getElementById('micBtn').classList.toggle('active'); }
+    function toggleCam() { localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled; document.getElementById('camBtn').classList.toggle('active'); }
     async function toggleShare() {
         const screen = await navigator.mediaDevices.getDisplayMedia({ video: true });
-        addVideo('share', screen, "Đang chia sẻ màn hình");
-    }
-    function sendChat() {
-        const input = document.getElementById('chatInput');
-        if(!input.value) return;
-        document.getElementById('chat-messages').innerHTML += `<div class="msg msg-me">${input.value}</div>`;
-        input.value = "";
-        document.getElementById('chat-messages').scrollTop = 9999;
+        addVideo('share-me', screen, "Màn hình đang chia sẻ");
+        // Gửi stream share cho mọi người
+        for (let id in connections) peer.call(id, screen);
     }
 </script>
 </body>
