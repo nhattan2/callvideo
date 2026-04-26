@@ -3,55 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DTU MEET Pro - 2026 Final Sync</title>
+    <title>DTU MEET Pro - Multi-User Fix</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root { --bg: #0a192f; --gold: #ffd700; --navy: #112240; --cyan: #64ffda; --red: #ff4d4d; --gray: #233554; }
         * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; user-select: none; }
         body { background: var(--bg); color: #e6f1ff; margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
-        
-        #app-container { display: none; height: 100vh; flex-direction: row; }
-        #video-section { flex: 1; display: flex; flex-direction: column; position: relative; }
         #video-grid { flex: 1; display: flex; flex-wrap: wrap; gap: 15px; padding: 80px 20px 20px 20px; align-content: center; justify-content: center; overflow-y: auto; }
-        
         .video-wrapper { position: relative; background: #000; border-radius: 15px; overflow: hidden; aspect-ratio: 16/9; border: 3px solid var(--gray); width: 100%; max-width: 450px; }
         .speaking { border-color: var(--gold) !important; box-shadow: 0 0 15px var(--gold); }
-
-        /* THANH THÔNG TIN TRÊN CÙNG */
-        .info-bar { position: absolute; top: 15px; left: 15px; right: 15px; display: flex; justify-content: space-between; z-index: 1000; pointer-events: none; }
-        .info-item { background: rgba(17, 34, 64, 0.95); padding: 10px 18px; border-radius: 10px; border: 1px solid var(--cyan); color: var(--gold); pointer-events: auto; cursor: pointer; font-weight: bold; font-size: 14px; }
-
-        /* CHAT BOX */
-        #chat-section { width: 300px; display: flex; flex-direction: column; background: var(--navy); border-left: 1px solid var(--gray); transition: 0.3s; }
+        .toolbar { height: 85px; background: var(--navy); display: flex; justify-content: center; align-items: center; gap: 12px; border-top: 1px solid var(--gray); }
+        .btn-tool { width: 45px; height: 45px; border-radius: 50%; border: none; cursor: pointer; background: var(--gray); color: white; font-size: 18px; }
+        #chat-section { width: 300px; display: flex; flex-direction: column; background: var(--navy); border-left: 1px solid var(--gray); }
         #chat-section.hidden { width: 0; overflow: hidden; border: none; }
         #chat-messages { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; }
         .msg { padding: 8px 12px; border-radius: 15px; font-size: 13px; max-width: 85%; }
         .msg-me { align-self: flex-end; background: var(--cyan); color: var(--bg); }
         .msg-them { align-self: flex-start; background: var(--gray); color: white; }
-
-        .toolbar { height: 85px; background: var(--navy); display: flex; justify-content: center; align-items: center; gap: 12px; border-top: 1px solid var(--gray); }
-        .btn-tool { width: 45px; height: 45px; border-radius: 50%; border: none; cursor: pointer; background: var(--gray); color: white; font-size: 18px; }
-        .btn-tool.active { background: var(--red); }
     </style>
 </head>
 <body oncontextmenu="return false;">
 
 <div id="home-screen" style="position:fixed; inset:0; background:var(--bg); z-index:5000; display:flex; align-items:center; justify-content:center;">
     <div style="background:var(--navy); padding:30px; border-radius:20px; width:380px; border:1px solid var(--cyan); text-align:center;">
-        <h2 style="color:var(--gold); margin:0 0 20px 0;">DTU MEET PRO</h2>
-        <input type="text" id="userName" placeholder="Tên bạn..." style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:none; background:#0d1b2a; color:white;">
+        <h2 style="color:var(--gold);">DTU MEET PRO</h2>
+        <input type="text" id="userName" placeholder="Tên bạn..." style="width:100%; padding:12px; margin:10px 0; border-radius:8px; border:none; background:#0d1b2a; color:white;">
         <button onclick="startApp(true)" style="width:100%; padding:12px; background:var(--cyan); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">TẠO PHÒNG</button>
         <div style="margin:10px 0; opacity:0.5;">-- HOẶC --</div>
-        <input type="text" id="roomInput" inputmode="numeric" placeholder="Mã 6 số..." style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:none; background:#0d1b2a; color:white;">
+        <input type="text" id="roomInput" inputmode="numeric" placeholder="Nhập mã 6 số..." style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:none; background:#0d1b2a; color:white;">
         <button onclick="startApp(false)" style="width:100%; padding:12px; background:transparent; border:1px solid var(--cyan); color:var(--cyan); border-radius:8px; cursor:pointer;">VÀO PHÒNG</button>
     </div>
 </div>
 
-<div id="app-container">
-    <div id="video-section">
-        <div class="info-bar">
-            <div class="info-item" onclick="copyCode()">🔑 PHÒNG: <span id="room-display">------</span></div>
-            <div class="info-item" style="color:white;">👥 <span id="user-total">1</span> người</div>
+<div id="app-container" style="display:none; height:100vh; flex-direction:row;">
+    <div id="video-section" style="flex:1; display:flex; flex-direction:column; position:relative;">
+        <div style="position:absolute; top:20px; left:20px; right:20px; display:flex; justify-content:space-between; z-index:100; pointer-events:none;">
+            <div style="background:rgba(17,34,64,0.9); padding:10px 20px; border-radius:12px; border:1px solid var(--cyan); color:var(--gold); pointer-events:auto; cursor:pointer;" onclick="copyRoom()">🔑: <span id="room-display">------</span></div>
+            <div style="background:rgba(17,34,64,0.9); padding:10px 20px; border-radius:12px; border:1px solid var(--cyan); color:white;">👥 <span id="user-count">1</span></div>
         </div>
         <div id="video-grid"></div>
         <div class="toolbar">
@@ -59,16 +47,15 @@
             <button class="btn-tool" id="camBtn" onclick="toggleCam()">📷</button>
             <button class="btn-tool" onclick="toggleChat()">💬</button>
             <button class="btn-tool" id="shareBtn" onclick="toggleShare()">🖥️</button>
-            <button onclick="location.reload()" style="background:var(--red); color:white; border:none; padding:10px 20px; border-radius:20px; cursor:pointer; font-weight:bold;">RỜI PHÒNG</button>
+            <button onclick="location.reload()" style="background:var(--red); color:white; border:none; padding:10px 25px; border-radius:25px; cursor:pointer; font-weight:bold;">RỜI PHÒNG</button>
         </div>
     </div>
-
     <div id="chat-section" class="hidden">
         <div style="padding:15px; font-weight:bold; border-bottom:1px solid var(--gray); color:var(--cyan);">CHAT BOX</div>
         <div id="chat-messages"></div>
         <div style="padding:10px; display:flex; gap:5px; border-top:1px solid var(--gray);">
-            <input type="text" id="chatInput" placeholder="Nhắn tin..." style="flex:1; padding:10px; border-radius:20px; border:none; background:var(--gray); color:white; outline:none;">
-            <button onclick="sendChat()" style="background:var(--cyan); border:none; border-radius:50%; width:35px; height:35px; cursor:pointer;">➤</button>
+            <input type="text" id="chatInput" placeholder="Nhắn tin..." style="flex:1; padding:8px; border-radius:15px; border:none; background:var(--gray); color:white;">
+            <button onclick="sendChat()" style="background:var(--cyan); border:none; border-radius:50%; width:35px; height:35px;">➤</button>
         </div>
     </div>
 </div>
@@ -76,24 +63,19 @@
 <script>
     let localStream, peer, myName, roomCode, isAdmin = false;
     const conns = {}; 
-
-    // Chống soi code
-    document.onkeydown = e => { if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && (e.keyCode == 73 || e.keyCode == 74)) || (e.ctrlKey && e.keyCode == 85)) return false; };
+    const peersInRoom = new Set(); // Danh sách tất cả ID trong phòng
 
     async function startApp(isCreate) {
         myName = document.getElementById('userName').value || "Người dùng";
         isAdmin = isCreate;
         roomCode = isCreate ? Math.floor(100000 + Math.random() * 900000).toString() : document.getElementById('roomInput').value;
         if(!roomCode) return;
-
-        try {
-            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: { echoCancellation: true, noiseSuppression: true } });
-            document.getElementById('home-screen').style.display = 'none';
-            document.getElementById('app-container').style.display = 'flex';
-            document.getElementById('room-display').innerText = roomCode;
-            addVideo('me', localStream, myName + " (Bạn)");
-            initPeer();
-        } catch (e) { alert("Lỗi: Cần quyền Camera/Mic!"); }
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        document.getElementById('home-screen').style.display = 'none';
+        document.getElementById('app-container').style.display = 'flex';
+        document.getElementById('room-display').innerText = roomCode;
+        addVideo('me', localStream, myName + " (Bạn)");
+        initPeer();
     }
 
     function initPeer() {
@@ -104,9 +86,9 @@
         peer.on('open', id => {
             if (!isAdmin) {
                 const adminId = `DTU-${roomCode}-ADMIN`;
-                peer.call(adminId, localStream);
                 const conn = peer.connect(adminId);
                 setupData(conn);
+                peer.call(adminId, localStream);
             }
         });
 
@@ -116,7 +98,14 @@
             call.on('close', () => removeVideo(call.peer));
         });
 
-        peer.on('connection', conn => setupData(conn));
+        peer.on('connection', conn => {
+            setupData(conn);
+            if (isAdmin) {
+                // ADMIN gửi danh sách tất cả Peer hiện tại cho người mới vào
+                peersInRoom.add(conn.peer);
+                broadcast({ type: 'new-peer-list', peers: Array.from(peersInRoom) });
+            }
+        });
     }
 
     function setupData(conn) {
@@ -124,7 +113,17 @@
         conn.on('data', data => {
             if (data.type === 'chat') {
                 displayChat(data.user, data.msg, false);
-                if (isAdmin) broadcast({ type: 'chat', user: data.user, msg: data.msg }, conn.peer);
+                if (isAdmin) broadcast(data, conn.peer);
+            }
+            if (data.type === 'new-peer-list' && !isAdmin) {
+                // Người dùng mới nhận danh sách và chủ động gọi cho những người cũ
+                data.peers.forEach(peerId => {
+                    if (peerId !== peer.id && !conns[peerId]) {
+                        const newConn = peer.connect(peerId);
+                        setupData(newConn);
+                        peer.call(peerId, localStream);
+                    }
+                });
             }
         });
         conn.on('close', () => removeVideo(conn.peer));
@@ -136,21 +135,20 @@
         const wrap = document.createElement('div');
         wrap.className = 'video-wrapper';
         wrap.id = `wrap-${id}`;
-        
         const isShare = id.includes('share');
         wrap.innerHTML = `<video id="vid-${id}" autoplay playsinline style="width:100%; height:100%; object-fit:${isShare?'contain':'cover'}"></video>
                           <div style="position:absolute; bottom:8px; left:10px; background:rgba(0,0,0,0.6); padding:3px 10px; border-radius:8px; font-size:11px;">${label}</div>`;
         grid.appendChild(wrap);
         document.getElementById(`vid-${id}`).srcObject = stream;
         detectVoice(stream, id);
-        updateUserCount();
+        updateCount();
     }
 
     function removeVideo(id) {
-        const el = document.getElementById(`wrap-${id}`);
-        if (el) el.remove();
+        if(document.getElementById(`wrap-${id}`)) document.getElementById(`wrap-${id}`).remove();
         delete conns[id];
-        updateUserCount();
+        peersInRoom.delete(id);
+        updateCount();
     }
 
     function broadcast(data, exclude) {
@@ -180,14 +178,8 @@
         try {
             const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
             addVideo('share-me', stream, "Bạn đang chia sẻ");
-            
-            // Gửi luồng share cho mọi người
             for (let id in conns) peer.call(id, stream);
-            
-            // TỰ ĐỘNG XÓA KHI BẤM "DỪNG CHIA SẺ"
-            stream.getVideoTracks()[0].onended = () => {
-                removeVideo('share-me');
-            };
+            stream.getVideoTracks()[0].onended = () => removeVideo('share-me');
         } catch (e) {}
     }
 
@@ -196,18 +188,18 @@
         const analyser = audioCtx.createAnalyser();
         audioCtx.createMediaStreamSource(stream).connect(analyser);
         const data = new Uint8Array(analyser.frequencyBinCount);
-        const check = () => {
+        const frame = () => {
             analyser.getByteFrequencyData(data);
             let vol = data.reduce((a, b) => a + b) / data.length;
             const wrap = document.getElementById(`wrap-${id}`);
-            if (wrap) { wrap.classList.toggle('speaking', vol > 35); requestAnimationFrame(check); }
+            if (wrap) { wrap.classList.toggle('speaking', vol > 35); requestAnimationFrame(frame); }
         };
-        check();
+        frame();
     }
 
-    function updateUserCount() { document.getElementById('user-total').innerText = document.querySelectorAll('.video-wrapper').length; }
+    function updateCount() { document.getElementById('user-count').innerText = document.querySelectorAll('.video-wrapper').length; }
     function toggleChat() { document.getElementById('chat-section').classList.toggle('hidden'); }
-    function copyCode() { navigator.clipboard.writeText(roomCode); alert("Đã copy mã phòng!"); }
+    function copyRoom() { navigator.clipboard.writeText(roomCode); alert("Đã copy mã!"); }
     function toggleMic() { localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled; document.getElementById('micBtn').classList.toggle('active'); }
     function toggleCam() { localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled; document.getElementById('camBtn').classList.toggle('active'); }
 </script>
