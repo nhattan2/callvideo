@@ -10,26 +10,42 @@
         * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; user-select: none; }
         body { background: var(--bg); color: #e6f1ff; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         
-        /* VIDEO GRID */
         #video-grid { flex: 1; display: flex; flex-wrap: wrap; gap: 12px; padding: 75px 15px 15px 15px; align-content: center; justify-content: center; overflow-y: auto; }
         .video-wrapper { position: relative; background: #000; border-radius: 12px; overflow: hidden; aspect-ratio: 16/9; border: 2px solid var(--gray); width: 100%; max-width: 420px; transition: 0.3s; }
         .speaking { border-color: var(--gold) !important; box-shadow: 0 0 12px var(--gold); }
 
-        /* TOOLBAR - FIX CHO MOBILE */
         .toolbar { 
             height: 85px; background: var(--navy); display: flex; justify-content: center; align-items: center; gap: 12px; 
             border-top: 1px solid var(--gray); padding-bottom: env(safe-area-inset-bottom);
         }
-        .btn-tool { width: 46px; height: 46px; border-radius: 50%; border: none; cursor: pointer; background: var(--gray); color: white; font-size: 20px; display: flex; align-items: center; justify-content: center; }
+        .btn-tool { position: relative; width: 46px; height: 46px; border-radius: 50%; border: none; cursor: pointer; background: var(--gray); color: white; font-size: 20px; display: flex; align-items: center; justify-content: center; }
         .btn-tool.off { background: var(--red); }
+        
+        /* Badge thông báo tin nhắn */
+        #chat-badge { 
+            position: absolute; top: -5px; right: -5px; background: var(--red); color: white; 
+            font-size: 10px; min-width: 18px; height: 18px; border-radius: 50%; 
+            display: none; align-items: center; justify-content: center; border: 2px solid var(--navy);
+        }
 
-        /* CHAT */
         #chat-section { width: 320px; display: flex; flex-direction: column; background: var(--navy); border-left: 1px solid var(--gray); transition: 0.3s; }
         #chat-section.hidden { width: 0; overflow: hidden; border: none; }
         #chat-messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
         .msg { padding: 8px 12px; border-radius: 15px; font-size: 13px; max-width: 85%; word-wrap: break-word; }
         .msg-me { align-self: flex-end; background: var(--cyan); color: var(--bg); }
         .msg-them { align-self: flex-start; background: var(--gray); color: white; }
+
+        /* Icon Animation */
+        .reaction-overlay {
+            position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+            font-size: 50px; pointer-events: none; animation: popOut 1s ease-out forwards; z-index: 10;
+        }
+        @keyframes popOut { 0% { transform: scale(0); opacity: 0; } 50% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(1); opacity: 0; } }
+
+        #icon-menu { 
+            position: absolute; bottom: 90px; background: var(--navy); border: 1px solid var(--gray); 
+            padding: 10px; border-radius: 15px; display: none; gap: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
 
         @media (max-width: 768px) { #chat-section { position: fixed; inset: 0; width: 100%; z-index: 2000; } }
     </style>
@@ -56,11 +72,20 @@
         
         <div id="video-grid"></div>
 
+        <div id="icon-menu">
+            <span onclick="sendReaction('❤️')" style="cursor:pointer; font-size: 24px;">❤️</span>
+            <span onclick="sendReaction('😂')" style="cursor:pointer; font-size: 24px;">😂</span>
+            <span onclick="sendReaction('👍')" style="cursor:pointer; font-size: 24px;">👍</span>
+            <span onclick="sendReaction('🔥')" style="cursor:pointer; font-size: 24px;">🔥</span>
+        </div>
+
         <div class="toolbar">
             <button class="btn-tool" id="micBtn" onclick="toggleMic()">🎤</button>
             <button class="btn-tool" id="camBtn" onclick="toggleCam()">📷</button>
-            <button class="btn-tool" onclick="toggleChat()">💬</button>
-            <button class="btn-tool" id="shareBtn" onclick="toggleShare()">🖥️</button>
+            <button class="btn-tool" onclick="toggleChat()">
+                💬 <div id="chat-badge">0</div>
+            </button>
+            <button class="btn-tool" id="reactionBtn" onclick="toggleIconMenu()">😊</button>
             <button onclick="location.reload()" style="background:var(--red); color:white; border:none; padding:10px 20px; border-radius:20px; font-weight:bold; cursor:pointer;">KẾT THÚC</button>
         </div>
     </div>
@@ -80,6 +105,7 @@
 
 <script>
     let localStream, peer, myName, roomCode, isAdmin = false;
+    let unreadCount = 0;
     const conns = {}; 
     const calls = {};
 
@@ -120,10 +146,8 @@
 
         peer.on('connection', conn => {
             setupData(conn);
-            // ADMIN PHẢI CHỦ ĐỘNG GỌI LẠI ĐỂ MỌI NGƯỜI THẤY ADMIN
             if (isAdmin) {
                 peer.call(conn.peer, localStream);
-                // Báo cho mọi người khác trong phòng gọi cho người mới (Vòng tuần hoàn)
                 broadcast({ type: 'new-peer', peerId: conn.peer }, conn.peer);
             }
         });
@@ -142,8 +166,11 @@
                 displayChat(data.user, data.msg, false);
                 if (isAdmin) broadcast(data, conn.peer);
             }
+            if (data.type === 'reaction') {
+                showReaction(conn.peer, data.icon);
+                if (isAdmin) broadcast(data, conn.peer);
+            }
             if (data.type === 'new-peer' && !isAdmin) {
-                // Thành viên cũ nhận được ID mới -> chủ động gọi cho thành viên mới
                 peer.call(data.peerId, localStream);
                 const newConn = peer.connect(data.peerId);
                 setupData(newConn);
@@ -158,10 +185,10 @@
         const wrap = document.createElement('div');
         wrap.className = 'video-wrapper';
         wrap.id = `wrap-${id}`;
-        const isShare = id.includes('share');
         
-        wrap.innerHTML = `<video id="vid-${id}" autoplay playsinline style="width:100%; height:100%; object-fit:${isShare?'contain':'cover'}"></video>
-                          <div style="position:absolute; bottom:8px; left:12px; background:rgba(0,0,0,0.6); padding:4px 10px; border-radius:8px; font-size:11px;">${label}</div>`;
+        wrap.innerHTML = `<video id="vid-${id}" autoplay playsinline style="width:100%; height:100%; object-fit:cover"></video>
+                          <div style="position:absolute; bottom:8px; left:12px; background:rgba(0,0,0,0.6); padding:4px 10px; border-radius:8px; font-size:11px;">${label}</div>
+                          <div id="react-${id}"></div>`;
         grid.appendChild(wrap);
         document.getElementById(`vid-${id}`).srcObject = stream;
         detectVoice(stream, id);
@@ -180,13 +207,25 @@
         for (let id in conns) if (id !== exclude) conns[id].send(data);
     }
 
-    async function toggleShare() {
-        try {
-            const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-            addVideo('share-me', stream, "Bạn đang chia sẻ");
-            for (let id in conns) peer.call(id, stream);
-            stream.getVideoTracks()[0].onended = () => removeVideo('share-me');
-        } catch (e) {}
+    function toggleIconMenu() {
+        const menu = document.getElementById('icon-menu');
+        menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+    }
+
+    function sendReaction(icon) {
+        showReaction('me', icon);
+        const data = { type: 'reaction', icon: icon };
+        if (isAdmin) broadcast(data);
+        else if (conns[`DTU-${roomCode}-ADMIN`]) conns[`DTU-${roomCode}-ADMIN`].send(data);
+        toggleIconMenu();
+    }
+
+    function showReaction(peerId, icon) {
+        const target = document.getElementById(`react-${peerId}`);
+        if (target) {
+            target.innerHTML = `<div class="reaction-overlay">${icon}</div>`;
+            setTimeout(() => target.innerHTML = '', 2000);
+        }
     }
 
     function sendChat() {
@@ -201,11 +240,29 @@
 
     function displayChat(user, msg, isMe) {
         const chatBox = document.getElementById('chat-messages');
+        const isChatHidden = document.getElementById('chat-section').classList.contains('hidden');
+        
+        if (isChatHidden && !isMe) {
+            unreadCount++;
+            const badge = document.getElementById('chat-badge');
+            badge.innerText = unreadCount;
+            badge.style.display = 'flex';
+        }
+
         const div = document.createElement('div');
         div.className = `msg ${isMe ? 'msg-me' : 'msg-them'}`;
         div.innerHTML = `<b>${isMe?'Bạn':user}:</b> ${msg}`;
         chatBox.appendChild(div);
         chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    function toggleChat() { 
+        const chatSection = document.getElementById('chat-section');
+        chatSection.classList.toggle('hidden');
+        if (!chatSection.classList.contains('hidden')) {
+            unreadCount = 0;
+            document.getElementById('chat-badge').style.display = 'none';
+        }
     }
 
     function detectVoice(stream, id) {
@@ -224,7 +281,6 @@
 
     function toggleMic() { localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled; document.getElementById('micBtn').classList.toggle('off', !localStream.getAudioTracks()[0].enabled); }
     function toggleCam() { localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled; document.getElementById('camBtn').classList.toggle('off', !localStream.getVideoTracks()[0].enabled); }
-    function toggleChat() { document.getElementById('chat-section').classList.toggle('hidden'); }
     function updateCount() { document.getElementById('user-count').innerText = document.querySelectorAll('.video-wrapper').length; }
     function copyCode() { navigator.clipboard.writeText(roomCode); alert("Đã copy mã!"); }
 </script>
