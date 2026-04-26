@@ -93,7 +93,7 @@
 
         <div class="toolbar">
             <button class="btn-tool" id="micBtn" onclick="toggleMic()">🎤</button>
-            <button class="btn-tool" id="noiseBtn" onclick="toggleNoiseSuppression()" title="Lọc tiếng ồn">🔇</button>
+            <button class="btn-tool" id="noiseBtn" onclick="toggleNoiseSuppression()" title="Lọc tiếng ồn & tiếng vang">🔇</button>
             <button class="btn-tool" id="camBtn" onclick="toggleCam()">📷</button>
             <button class="btn-tool" onclick="toggleChat()">
                 💬 <div id="chat-badge">0</div>
@@ -130,10 +130,16 @@
         if(!roomCode) return;
 
         try {
-            // Khởi tạo luồng mặc định
+            // Cấu hình audio mặc định với khả năng chống vọng (Echo Cancellation)
             localStream = await navigator.mediaDevices.getUserMedia({ 
                 video: true, 
-                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } 
+                audio: { 
+                    echoCancellation: true, 
+                    noiseSuppression: true, 
+                    autoGainControl: true,
+                    googEchoCancellation: true, // Hỗ trợ cho Chrome cũ
+                    googNoiseSuppression: true
+                } 
             });
             document.getElementById('home-screen').style.display = 'none';
             document.getElementById('app-container').style.display = 'flex';
@@ -143,7 +149,6 @@
         } catch (e) { alert("Access Denied: Camera/Mic required!"); }
     }
 
-    // Hàm lọc tiếng ồn tùy chỉnh
     async function toggleNoiseSuppression() {
         if (!localStream) return;
         
@@ -153,10 +158,13 @@
         btn.innerText = isNoiseSuppressed ? '🔊' : '🔇';
 
         try {
+            // Cấu hình âm thanh tối ưu để loại bỏ tiếng vang khi bật lọc
             const audioConstraints = {
                 echoCancellation: true,
                 noiseSuppression: isNoiseSuppressed,
                 autoGainControl: isNoiseSuppressed,
+                googEchoCancellation: true,
+                googNoiseSuppression: true,
                 channelCount: 1
             };
 
@@ -168,12 +176,11 @@
             localStream.addTrack(newTrack);
             oldTrack.stop();
 
-            // Cập nhật track cho tất cả các cuộc gọi đang diễn ra
             for (let peerId in calls) {
                 const sender = calls[peerId].peerConnection.getSenders().find(s => s.track.kind === 'audio');
                 if (sender) sender.replaceTrack(newTrack);
             }
-        } catch (e) { console.error("Noise Suppression Toggle Failed", e); }
+        } catch (e) { console.error("Filter Toggle Failed", e); }
     }
 
     function initPeer() {
