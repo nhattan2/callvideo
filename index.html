@@ -6,7 +6,7 @@
     <title>SECURE CONNECT - PRIVATE BRIDGE</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --bg: #0a192f; --gold: #ffd700; --navy: #112240; --cyan: #64ffda; --red: #ff4d4d; --gray: #233554; }
+        :root { --bg: #0a192f; --gold: #ffd700; --navy: #112240; --cyan: #64ffda; --red: #ff4d4d; --gray: #233554; --green: #2ecc71; }
         * { box-sizing: border-box; font-family: 'Segoe UI', sans-serif; user-select: none; }
         body { background: var(--bg); color: #e6f1ff; margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
         
@@ -20,6 +20,7 @@
         }
         .btn-tool { position: relative; width: 46px; height: 46px; border-radius: 50%; border: none; cursor: pointer; background: var(--gray); color: white; font-size: 20px; display: flex; align-items: center; justify-content: center; }
         .btn-tool.off { background: var(--red); }
+        .btn-tool.active { background: var(--green); box-shadow: 0 0 10px var(--green); }
         
         #chat-badge { 
             position: absolute; top: -5px; right: -5px; background: var(--red); color: white; 
@@ -52,7 +53,7 @@
             padding: 12px; border-radius: 20px; display: none; gap: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.6);
             flex-wrap: wrap; max-width: 250px; justify-content: center;
         }
-        .icon-item { cursor: pointer; font-size: 26px; transition: 0.2s; }
+        .icon-item { cursor: pointer; font-size: 26px; }
 
         @media (max-width: 768px) { #chat-section { position: fixed; inset: 0; width: 100%; z-index: 2000; } }
     </style>
@@ -92,6 +93,7 @@
 
         <div class="toolbar">
             <button class="btn-tool" id="micBtn" onclick="toggleMic()">🎤</button>
+            <button class="btn-tool" id="noiseBtn" onclick="toggleNoiseSuppression()" title="Lọc tiếng ồn">🔇</button>
             <button class="btn-tool" id="camBtn" onclick="toggleCam()">📷</button>
             <button class="btn-tool" onclick="toggleChat()">
                 💬 <div id="chat-badge">0</div>
@@ -117,6 +119,7 @@
 <script>
     let localStream, peer, myName, roomCode, isAdmin = false;
     let unreadCount = 0;
+    let isNoiseSuppressed = false;
     const conns = {}; 
     const calls = {};
 
@@ -127,7 +130,11 @@
         if(!roomCode) return;
 
         try {
-            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: { echoCancellation: true, noiseSuppression: true } });
+            // Khởi tạo luồng mặc định
+            localStream = await navigator.mediaDevices.getUserMedia({ 
+                video: true, 
+                audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } 
+            });
             document.getElementById('home-screen').style.display = 'none';
             document.getElementById('app-container').style.display = 'flex';
             document.getElementById('room-display').innerText = roomCode;
@@ -136,8 +143,40 @@
         } catch (e) { alert("Access Denied: Camera/Mic required!"); }
     }
 
+    // Hàm lọc tiếng ồn tùy chỉnh
+    async function toggleNoiseSuppression() {
+        if (!localStream) return;
+        
+        isNoiseSuppressed = !isNoiseSuppressed;
+        const btn = document.getElementById('noiseBtn');
+        btn.classList.toggle('active', isNoiseSuppressed);
+        btn.innerText = isNoiseSuppressed ? '🔊' : '🔇';
+
+        try {
+            const audioConstraints = {
+                echoCancellation: true,
+                noiseSuppression: isNoiseSuppressed,
+                autoGainControl: isNoiseSuppressed,
+                channelCount: 1
+            };
+
+            const newStream = await navigator.mediaDevices.getUserMedia({ audio: audioConstraints, video: false });
+            const newTrack = newStream.getAudioTracks()[0];
+            
+            const oldTrack = localStream.getAudioTracks()[0];
+            localStream.removeTrack(oldTrack);
+            localStream.addTrack(newTrack);
+            oldTrack.stop();
+
+            // Cập nhật track cho tất cả các cuộc gọi đang diễn ra
+            for (let peerId in calls) {
+                const sender = calls[peerId].peerConnection.getSenders().find(s => s.track.kind === 'audio');
+                if (sender) sender.replaceTrack(newTrack);
+            }
+        } catch (e) { console.error("Noise Suppression Toggle Failed", e); }
+    }
+
     function initPeer() {
-        // Gỡ bỏ STUN của Google để tăng tính riêng tư
         const myId = isAdmin ? `SC-${roomCode}-MASTER` : `SC-${roomCode}-${Math.random().toString(36).substr(2, 5)}`;
         peer = new Peer(myId);
 
