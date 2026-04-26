@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>DTU MEET Pro - Emotion Sync</title>
+    <title>DTU MEET Pro - Admin Remote Control</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         :root { --bg: #0a192f; --gold: #ffd700; --navy: #112240; --cyan: #64ffda; --red: #ff4d4d; --gray: #233554; }
@@ -11,26 +11,19 @@
         body { background: var(--bg); color: #e6f1ff; margin: 0; height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
         
         #video-grid { flex: 1; display: flex; flex-wrap: wrap; gap: 15px; padding: 80px 15px 15px 15px; align-content: center; justify-content: center; overflow-y: auto; }
-        .video-wrapper { position: relative; background: #000; border-radius: 15px; overflow: hidden; aspect-ratio: 16/9; border: 3px solid var(--gray); width: 100%; max-width: 450px; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
+        .video-wrapper { position: relative; background: #000; border-radius: 15px; overflow: hidden; aspect-ratio: 16/9; border: 3px solid var(--gray); width: 100%; max-width: 450px; display: flex; align-items: center; justify-content: center; transition: 0.3s; cursor: pointer; }
         
-        .speaking { border-color: var(--gold) !important; box-shadow: 0 0 20px var(--gold); }
-        
-        /* Hiển thị Icon cảm xúc */
-        .emoji-display { position: absolute; font-size: 50px; z-index: 10; animation: bounce 0.5s ease infinite alternate; pointer-events: none; display: none; }
-        @keyframes bounce { from { transform: scale(1); } to { transform: scale(1.2); } }
+        .speaking { border-color: var(--gold) !important; box-shadow: 0 0 15px var(--gold); }
+        .avatar { width: 80px; height: 80px; background: var(--gray); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; color: var(--cyan); border: 2px solid var(--cyan); text-transform: uppercase; }
 
-        .avatar { width: 80px; height: 80px; background: var(--gray); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px; color: var(--cyan); border: 2px solid var(--cyan); }
+        /* Label Admin Control */
+        .admin-label { position: absolute; top: 10px; left: 10px; background: var(--red); color: white; font-size: 10px; padding: 2px 6px; border-radius: 4px; display: none; font-weight: bold; }
 
         .toolbar { height: 85px; background: var(--navy); display: flex; justify-content: center; align-items: center; gap: 12px; border-top: 1px solid var(--gray); padding-bottom: env(safe-area-inset-bottom); }
         .btn-tool { width: 48px; height: 48px; border-radius: 50%; border: none; cursor: pointer; background: var(--gray); color: white; font-size: 20px; display: flex; align-items: center; justify-content: center; position: relative; }
         .btn-tool.off { background: var(--red); }
 
-        /* Menu Icon */
-        #emoji-menu { position: absolute; bottom: 95px; background: var(--navy); border: 1px solid var(--cyan); border-radius: 15px; display: none; gap: 10px; padding: 10px; z-index: 3000; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
-        .emoji-item { font-size: 25px; cursor: pointer; transition: 0.2s; }
-        .emoji-item:hover { transform: scale(1.3); }
-
-        #chat-section { width: 320px; display: flex; flex-direction: column; background: var(--navy); border-left: 1px solid var(--gray); }
+        #chat-section { width: 320px; display: flex; flex-direction: column; background: var(--navy); border-left: 1px solid var(--gray); transition: 0.3s; }
         #chat-section.hidden { width: 0; overflow: hidden; border: none; }
         #chat-messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
         .msg { padding: 8px 12px; border-radius: 15px; font-size: 13px; max-width: 85%; word-wrap: break-word; }
@@ -39,19 +32,25 @@
 </head>
 <body oncontextmenu="return false;">
 
-<audio id="notif-sound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3"></audio>
-
 <div id="home-screen" style="position:fixed; inset:0; background:var(--bg); z-index:5000; display:flex; align-items:center; justify-content:center; padding:20px;">
-    <div style="background:var(--navy); padding:25px; border-radius:20px; width:100%; max-width:360px; border:1px solid var(--cyan); text-align:center;">
+    <div style="background:var(--navy); padding:25px; border-radius:20px; width:100%; max-width:380px; border:1px solid var(--cyan); text-align:center;">
         <h2 style="color:var(--gold); margin-bottom: 20px;">DTU MEET PRO</h2>
-        <input type="text" id="userName" placeholder="Tên bạn..." style="width:100%; padding:12px; margin-bottom:12px; border-radius:8px; border:none; background:#0d1b2a; color:white; border:1px solid var(--gray);">
+        <input type="text" id="userName" placeholder="Tên của bạn..." style="width:100%; padding:12px; margin-bottom:12px; border-radius:8px; border:none; background:#0d1b2a; color:white; border:1px solid var(--gray);">
         
-        <select id="callMode" style="width:100%; padding:10px; border-radius:8px; background:#0d1b2a; color:white; border:1px solid var(--gray); margin-bottom:15px;">
-            <option value="video">🎥 Gọi Video</option>
-            <option value="voice">📞 Gọi Thoại</option>
-        </select>
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+            <select id="callMode" style="flex:1; padding:10px; border-radius:8px; background:#0d1b2a; color:white; border:1px solid var(--gray);">
+                <option value="video">🎥 Chế độ Video</option>
+                <option value="voice">📞 Chế độ Thoại</option>
+            </select>
+            <select id="timeSelect" style="flex:1; padding:10px; border-radius:8px; background:#0d1b2a; color:white; border:1px solid var(--gray);">
+                <option value="0">⏳ Vô hạn</option>
+                <option value="30">30 Phút</option>
+                <option value="60">1 Tiếng</option>
+                <option value="120">2 Tiếng</option>
+            </select>
+        </div>
 
-        <button onclick="startApp(true)" style="width:100%; padding:12px; background:var(--cyan); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">TẠO PHÒNG</button>
+        <button onclick="startApp(true)" style="width:100%; padding:12px; background:var(--cyan); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">TẠO PHÒNG (ADMIN)</button>
         <div style="margin:10px 0; opacity:0.5;">-- HOẶC --</div>
         <input type="text" id="roomInput" inputmode="numeric" placeholder="Mã 6 số..." style="width:100%; padding:12px; margin-bottom:12px; border-radius:8px; border:none; background:#0d1b2a; color:white;">
         <button onclick="startApp(false)" style="width:100%; padding:12px; background:transparent; border:1px solid var(--cyan); color:var(--cyan); border-radius:8px; cursor:pointer;">VÀO PHÒNG</button>
@@ -62,24 +61,16 @@
     <div id="video-section" style="flex:1; display:flex; flex-direction:column; position:relative;">
         <div style="position:absolute; top:15px; left:15px; right:15px; display:flex; justify-content:space-between; z-index:100; pointer-events:none;">
             <div style="background:rgba(17,34,64,0.9); padding:8px 15px; border-radius:10px; border:1px solid var(--cyan); color:var(--gold); pointer-events:auto; font-weight:bold;" onclick="copyCode()">🔑 Mã: <span id="room-display">---</span></div>
+            <div id="timer-display" style="background:rgba(17,34,64,0.9); padding:8px 15px; border-radius:10px; border:1px solid var(--red); color:white; display:none;">⏱ 00:00</div>
             <div style="background:rgba(17,34,64,0.9); padding:8px 15px; border-radius:10px; border:1px solid var(--cyan); color:white;">👥 <span id="user-total">1</span></div>
         </div>
         
         <div id="video-grid"></div>
 
-        <div id="emoji-menu">
-            <span class="emoji-item" onclick="sendEmoji('😡')">😡</span>
-            <span class="emoji-item" onclick="sendEmoji('😋')">😋</span>
-            <span class="emoji-item" onclick="sendEmoji('😂')">😂</span>
-            <span class="emoji-item" onclick="sendEmoji('😢')">😢</span>
-            <span class="emoji-item" onclick="sendEmoji('😴')">😴</span>
-        </div>
-
         <div class="toolbar">
             <button class="btn-tool" id="micBtn" onclick="toggleMic()">🎤</button>
             <button class="btn-tool" id="camBtn" onclick="toggleCam()">📷</button>
             <button class="btn-tool" onclick="toggleChat()">💬 <div id="chat-badge" style="position:absolute; top:-5px; right:-5px; background:red; color:white; font-size:10px; width:18px; height:18px; border-radius:50%; display:none; align-items:center; justify-content:center;">0</div></button>
-            <button class="btn-tool" onclick="toggleEmojiMenu()">😊</button>
             <button onclick="location.reload()" style="background:var(--red); color:white; border:none; padding:10px 15px; border-radius:20px; font-weight:bold; cursor:pointer;">RỜI PHÒNG</button>
         </div>
     </div>
@@ -101,21 +92,40 @@
     document.addEventListener('keydown', e => { if (e.target.id === 'chatInput' && e.key === 'Enter') { e.preventDefault(); sendChat(); } });
 
     async function startApp(isCreate) {
-        myName = document.getElementById('userName').value || "Người dùng";
+        myName = document.getElementById('userName').value || "Tân DTU";
         isAdmin = isCreate;
-        const isVoice = document.getElementById('callMode').value === 'voice';
+        const mode = document.getElementById('callMode').value;
+        const timeLimit = parseInt(document.getElementById('timeSelect').value);
         roomCode = isCreate ? Math.floor(100000 + Math.random() * 900000).toString() : document.getElementById('roomInput').value;
+        
         if(!roomCode) return;
 
         try {
             localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            if(isVoice) localStream.getVideoTracks().forEach(t => t.enabled = false);
+            
+            // Nếu là gọi thoại, tắt track video ngay từ đầu
+            if(mode === 'voice') localStream.getVideoTracks().forEach(t => t.enabled = false);
+
             document.getElementById('home-screen').style.display = 'none';
             document.getElementById('app-container').style.display = 'flex';
             document.getElementById('room-display').innerText = roomCode;
+            
             addVideo('me', localStream, myName + " (Bạn)");
+            if(isAdmin && timeLimit > 0) startTimer(timeLimit);
             initPeer();
-        } catch (e) { alert("Lỗi thiết bị!"); }
+        } catch (e) { alert("Vui lòng cấp quyền Mic/Cam!"); }
+    }
+
+    function startTimer(min) {
+        let sec = min * 60;
+        const el = document.getElementById('timer-display');
+        el.style.display = 'block';
+        const countdown = setInterval(() => {
+            sec--;
+            let m = Math.floor(sec/60), s = sec%60;
+            el.innerText = `⏱ ${m < 10 ? '0'+m : m}:${s < 10 ? '0'+s : s}`;
+            if(sec <= 0) { clearInterval(countdown); location.reload(); }
+        }, 1000);
     }
 
     function initPeer() {
@@ -150,14 +160,17 @@
         conns[conn.peer] = conn;
         conn.on('data', data => {
             if (data.type === 'chat') handleChat(data);
-            if (data.type === 'emoji') showEmoji(data.peerId, data.emoji);
+            if (data.type === 'remote-control') {
+                // Thành viên nhận lệnh từ Admin
+                if(data.action === 'toggle-mic') toggleMic();
+                if(data.action === 'toggle-cam') toggleCam();
+            }
             if (data.type === 'sync-mesh' && !isAdmin) {
                 peer.call(data.peerId, localStream);
                 const newConn = peer.connect(data.peerId);
                 setupData(newConn);
             }
         });
-        conn.on('close', () => removeVideo(conn.peer));
     }
 
     function addVideo(id, stream, label) {
@@ -167,45 +180,44 @@
         wrap.className = 'video-wrapper';
         wrap.id = `wrap-${id}`;
         
-        const hasVideo = stream.getVideoTracks().some(t => t.enabled);
-        wrap.innerHTML = hasVideo ? `<video id="vid-${id}" autoplay playsinline style="width:100%; height:100%; object-fit:cover;"></video>` : `<div class="avatar">${label.charAt(0)}</div>`;
-        wrap.innerHTML += `<div class="emoji-display" id="emo-${id}"></div>
+        // LUÔN HIỂN THỊ AVATAR TRÊN MÁY NGƯỜI KHÁC (THEO Ý TÂN)
+        // Dù Admin ép bật Cam, màn hình vẫn là Avatar để bảo mật
+        wrap.innerHTML = `<div class="avatar">${label.charAt(0)}</div>
+                           <video id="vid-${id}" autoplay playsinline muted style="display:none;"></video>
+                           <div class="admin-label" id="adm-lbl-${id}">CONTROL</div>
                            <div style="position:absolute; bottom:8px; left:12px; background:rgba(0,0,0,0.6); padding:4px 10px; border-radius:8px; font-size:11px;">${label}</div>`;
         
+        // Nếu là Admin, cho phép click vào khung hình thành viên để điều khiển
+        if(isAdmin && id !== 'me') {
+            wrap.onclick = () => {
+                const action = confirm(`Bạn muốn điều khiển ${label}?\nOK: Bật/Tắt Mic\nCancel: Bật/Tắt Cam`);
+                const conn = conns[id];
+                if(conn) conn.send({ type: 'remote-control', action: action ? 'toggle-mic' : 'toggle-cam' });
+            };
+        }
+
         grid.appendChild(wrap);
         if (document.getElementById(`vid-${id}`)) document.getElementById(`vid-${id}`).srcObject = stream;
         detectVoice(stream, id);
         updateCount();
     }
 
-    function sendEmoji(emoji) {
-        showEmoji('me', emoji);
-        broadcast({ type: 'emoji', peerId: peer.id, emoji: emoji });
-        toggleEmojiMenu();
+    function toggleMic() {
+        const t = localStream.getAudioTracks()[0];
+        if(t) { t.enabled = !t.enabled; document.getElementById('micBtn').classList.toggle('off', !t.enabled); }
     }
 
-    function showEmoji(id, emoji) {
-        const targetId = id === 'me' ? 'me' : id;
-        const el = document.getElementById(`emo-${targetId}`);
-        if(el) {
-            el.innerText = emoji;
-            el.style.display = 'block';
-            setTimeout(() => { el.style.display = 'none'; }, 5000);
-        }
-    }
-
-    function toggleEmojiMenu() {
-        const menu = document.getElementById('emoji-menu');
-        menu.style.display = menu.style.display === 'flex' ? 'none' : 'flex';
+    function toggleCam() {
+        const t = localStream.getVideoTracks()[0];
+        if(t) { t.enabled = !t.enabled; document.getElementById('camBtn').classList.toggle('off', !t.enabled); }
     }
 
     function handleChat(data) {
         displayChat(data.user, data.msg, false);
         if (document.getElementById('chat-section').classList.contains('hidden')) {
             unreadCount++;
-            const badge = document.getElementById('chat-badge');
-            badge.innerText = unreadCount; badge.style.display = 'flex';
-            document.getElementById('notif-sound').play().catch(()=>{});
+            document.getElementById('chat-badge').innerText = unreadCount;
+            document.getElementById('chat-badge').style.display = 'flex';
         }
         if (isAdmin) broadcast(data, data.from);
     }
@@ -244,11 +256,9 @@
             if(w) { w.classList.toggle('speaking', v > 35); requestAnimationFrame(check); }
         }; check();
     }
-    function toggleMic() { localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled; document.getElementById('micBtn').classList.toggle('off', !localStream.getAudioTracks()[0].enabled); }
-    function toggleCam() { if(localStream.getVideoTracks()[0]) { localStream.getVideoTracks()[0].enabled = !localStream.getVideoTracks()[0].enabled; document.getElementById('camBtn').classList.toggle('off', !localStream.getVideoTracks()[0].enabled); const myWrap = document.getElementById('wrap-me'); if(myWrap) { myWrap.remove(); addVideo('me', localStream, myName + " (Bạn)"); } } }
     function removeVideo(id) { const el = document.getElementById(`wrap-${id}`); if(el) el.remove(); delete conns[id]; delete calls[id]; updateCount(); }
     function updateCount() { document.getElementById('user-total').innerText = document.querySelectorAll('.video-wrapper').length; }
-    function copyCode() { navigator.clipboard.writeText(roomCode); alert("Đã copy!"); }
+    function copyCode() { navigator.clipboard.writeText(roomCode); alert("Đã copy mã phòng!"); }
 </script>
 </body>
 </html>
